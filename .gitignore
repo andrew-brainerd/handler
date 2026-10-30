@@ -3,3 +3,4 @@ spike/*.jsonl
 out/
 build/
 roku/source/config.brs
+characters/assignments.json
