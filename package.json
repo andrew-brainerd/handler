@@ -11,5 +11,8 @@
     "uninstall-hooks": "node scripts/hooks.mjs uninstall",
     "replay": "node scripts/replay.mjs",
     "test": "node --test"
+  },
+  "devDependencies": {
+    "sharp": "^0.35.5"
   }
 }

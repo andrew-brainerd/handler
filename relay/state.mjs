@@ -48,10 +48,37 @@ export function describeTool(name, input = {}) {
       return 'Asked a question';
     case 'TodoWrite':
       return 'Updated the task list';
+    case 'SubagentHandback':
+      return 'Reported back';
   }
   const mcp = /^mcp__(.+?)__(.+)$/.exec(name ?? '');
   return mcp ? `${mcp[1]}: ${mcp[2]}` : (name ?? 'tool');
 }
+
+const tagText = (text, tag) => new RegExp(`<${tag}>([\\s\\S]*?)</${tag}>`).exec(text)?.[1]?.trim() ?? null;
+
+export function parseInjected(prompt) {
+  if (typeof prompt !== 'string') return null;
+  const head = prompt.trimStart();
+  const agentMessage = /^<agent-message from="([^"]+)">/.exec(head);
+  if (agentMessage) return { agentId: agentMessage[1], line: 'Subagent reported back' };
+  if (head.startsWith('<task-notification>')) {
+    const summary = tagText(head, 'summary');
+    const isAgent = /^Agent "/.test(summary ?? '');
+    return { agentId: isAgent ? tagText(head, 'task-id') : null, line: clip(summary ?? 'Background task finished', 60) };
+  }
+  return null;
+}
+
+export const plain = (markdown) =>
+  typeof markdown === 'string'
+    ? markdown
+        .replace(/\*\*([^*]+)\*\*/g, '$1')
+        .replace(/`([^`]+)`/g, '$1')
+        .replace(/^\s*(#+|[-*]|\d+\.)\s+/gm, '')
+    : null;
+
+const keepLines = (text, max) => (typeof text === 'string' ? (text.length > max ? text.slice(0, max - 1).trimEnd() + '…' : text).trim() : null);
 
 function firstQuestion(input) {
   const q = input?.questions?.[0];
@@ -187,10 +214,17 @@ export class Board {
     },
     UserPromptSubmit: (s, e, now) => {
       s.visible = true;
+      const main = s.agents.get('main');
+      const injected = parseInjected(e.prompt);
+      if (injected) {
+        if (injected.agentId) s.agents.delete(injected.agentId);
+        setBase(main, 'working', now);
+        this.#activity(s, injected.line, main, now);
+        return;
+      }
       s.firstPrompt ??= clip(e.prompt, 120);
       s.lastPrompt = clip(e.prompt, 120);
       s.recentText = '';
-      const main = s.agents.get('main');
       clearAll(main);
       setBase(main, 'working', now);
     },
@@ -237,7 +271,7 @@ export class Board {
       const main = s.agents.get('main');
       clearAll(main);
       setBase(main, 'waiting', now, DONE);
-      s.lastMessage = clip(e.last_assistant_message, 600);
+      s.lastMessage = keepLines(e.last_assistant_message, 1500);
       this.#syncBackground(s, e.background_tasks, now);
     },
     StopFailure: (s, e, now) => {
@@ -364,7 +398,7 @@ export class Board {
         state: top.state,
         detail,
         question: top.question,
-        summary: s.summary ?? todo?.current ?? s.lastPrompt ?? clip(s.lastMessage, 160),
+        summary: s.summary ?? todo?.current ?? s.lastPrompt ?? clip(plain(s.lastMessage), 160),
         summarySource: s.summary ? 'summary' : todo?.current ? 'todo' : s.lastPrompt ? 'prompt' : s.lastMessage ? 'message' : null,
         lastMessage: s.lastMessage,
         todo,

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { Board, describeTool } from '../relay/state.mjs';
+import { Board, describeTool, parseInjected } from '../relay/state.mjs';
 import { findOutcome } from '../relay/transcript.mjs';
 
 const SID = 'sess-1';
@@ -234,4 +234,37 @@ test('parallel tool calls: a second call does not clear the first prompt', () =>
   assert.equal(card().detail, 'Needs permission: WebFetch dev.twitch.tv');
   board.resolve(SID, 'main', { results: { f1: 'done' } }, now + 100);
   assert.equal(board.snapshot(now + 100).sessions[0].state, 'working');
+});
+
+test('injected prompts are activity, not the user prompt', () => {
+  const { card } = run([
+    { hook_event_name: 'UserPromptSubmit', prompt: 'build the nav bar' },
+    { hook_event_name: 'SubagentStart', agent_id: 'ag1', agent_type: 'general-purpose' },
+    { hook_event_name: 'Stop', background_tasks: [{ id: 'ag1', type: 'subagent', status: 'running' }] },
+    { hook_event_name: 'UserPromptSubmit', prompt: '<agent-message from="ag1">\n[Subagent hand-back] The report follows:\n  Done.' },
+    {
+      hook_event_name: 'UserPromptSubmit',
+      prompt: '<task-notification>\n<task-id>b77</task-id>\n<status>completed</status>\n<summary>Background command "Run the tests" completed</summary>\n</task-notification>',
+    },
+  ]);
+  assert.equal(card().summary, 'build the nav bar');
+  assert.equal(card().state, 'working');
+  assert.equal(card().subagents, 0);
+  assert.deepEqual(card().activity.slice(0, 2), ['Background command "Run the tests" completed', 'Subagent reported back']);
+});
+
+test('parseInjected leaves real prompts alone', () => {
+  assert.equal(parseInjected('<div> why is this html broken?'), null);
+  assert.equal(parseInjected('fix the bug'), null);
+  assert.deepEqual(parseInjected('<task-notification>\n<task-id>a1</task-id>\n<summary>Agent "README" finished</summary>'), { agentId: 'a1', line: 'Agent "README" finished' });
+});
+
+test('last message keeps lines; the row summary is plain text', () => {
+  const { card } = run([
+    { hook_event_name: 'SessionStart', source: 'resume' },
+    { hook_event_name: 'PreToolUse', tool_name: 'Read', tool_use_id: 'r', tool_input: { file_path: 'a.md' } },
+    { hook_event_name: 'Stop', last_assistant_message: 'The **Twitch view** is built.\n\n- In the `nav bar`\n- Alt+T' },
+  ]);
+  assert.equal(card().lastMessage, 'The **Twitch view** is built.\n\n- In the `nav bar`\n- Alt+T');
+  assert.equal(card().summary, 'The Twitch view is built. In the nav bar Alt+T');
 });

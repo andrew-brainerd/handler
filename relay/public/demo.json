@@ -4,49 +4,177 @@
   "seq": 1,
   "sessions": [
     {
-      "id": "demo-1", "project": "condensate", "branch": "main", "state": "asking", "detail": "Asked a question", "needsYou": true,
-      "question": { "text": "Friends are playing: whose recent games should the strip show?", "options": ["Friends only", "Friends + me", "Everyone online"] },
-      "summary": "Scoping the friends-are-playing strip for the big screen", "summarySource": "summary",
-      "todo": null, "subagents": 0, "subagentList": [], "since": "-95", "lastEvent": "-95", "started": "-3600",
-      "activity": ["Asked a question", "Read condensate.md", "Grep \"^## 23|^## 24\""]
+      "id": "demo-1",
+      "project": "condensate",
+      "branch": "main",
+      "state": "asking",
+      "detail": "Asked a question",
+      "needsYou": true,
+      "question": {
+        "text": "Friends are playing: whose recent games should the strip show?",
+        "options": [
+          "Friends only",
+          "Friends + me",
+          "Everyone online"
+        ]
+      },
+      "summary": "Scoping the friends-are-playing strip for the big screen",
+      "summarySource": "summary",
+      "todo": null,
+      "subagents": 0,
+      "subagentList": [],
+      "since": "-95",
+      "lastEvent": "-95",
+      "started": "-3600",
+      "activity": [
+        "Asked a question",
+        "Read condensate.md",
+        "Grep \"^## 23|^## 24\""
+      ]
     },
     {
-      "id": "demo-2", "project": "drewtube", "branch": "nav-bar", "state": "needs_permission", "detail": "Needs permission: Bash: Run the Rust tests (general-purpose)", "needsYou": true,
-      "question": null, "summary": "Adding a nav bar and right-click menu to the WebView window", "summarySource": "summary",
-      "todo": { "current": "Wire the context menu", "done": 2, "total": 5 }, "subagents": 1,
-      "subagentList": [{ "type": "general-purpose", "description": "DrewTube nav bar + context menu", "state": "needs_permission" }],
-      "since": "-40", "lastEvent": "-40", "started": "-2400",
-      "activity": ["↳ Bash: Run the Rust tests", "↳ Edit menu.rs", "↳ Read lib.rs"]
+      "id": "demo-2",
+      "project": "drewtube",
+      "branch": "nav-bar",
+      "state": "needs_permission",
+      "detail": "Needs permission: Bash: Run the Rust tests (general-purpose)",
+      "needsYou": true,
+      "question": null,
+      "summary": "Adding a nav bar and right-click menu to the WebView window",
+      "summarySource": "summary",
+      "todo": {
+        "current": "Wire the context menu",
+        "done": 2,
+        "total": 5
+      },
+      "subagents": 1,
+      "subagentList": [
+        {
+          "type": "general-purpose",
+          "description": "DrewTube nav bar + context menu",
+          "state": "needs_permission"
+        }
+      ],
+      "since": "-40",
+      "lastEvent": "-40",
+      "started": "-2400",
+      "activity": [
+        "↳ Bash: Run the Rust tests",
+        "↳ Edit menu.rs",
+        "↳ Read lib.rs"
+      ]
     },
     {
-      "id": "demo-3", "project": "tally", "branch": "master", "state": "working", "detail": null, "needsYou": false,
-      "question": null, "summary": "Switching the browser board from a card grid to rows with more detail text", "summarySource": "summary",
-      "todo": null, "subagents": 0, "subagentList": [], "since": "-12", "lastEvent": "-3", "started": "-7200",
-      "activity": ["Edit index.html", "Bash: Shrink row height", "Read index.html"]
+      "id": "demo-3",
+      "project": "tally",
+      "branch": "master",
+      "state": "working",
+      "detail": null,
+      "needsYou": false,
+      "question": null,
+      "summary": "Switching the browser board from a card grid to rows with more detail text",
+      "summarySource": "summary",
+      "todo": null,
+      "subagents": 0,
+      "subagentList": [],
+      "since": "-12",
+      "lastEvent": "-3",
+      "started": "-7200",
+      "activity": [
+        "Edit index.html",
+        "Bash: Shrink row height",
+        "Read index.html"
+      ]
     },
     {
-      "id": "demo-4", "project": "brainerd-api", "branch": "main", "state": "working", "detail": null, "needsYou": false,
-      "question": null, "summary": "Building the Twitch EventSub webhook and verifying its signatures", "summarySource": "summary",
-      "todo": { "current": "Verify HMAC signatures", "done": 3, "total": 6 }, "subagents": 0, "subagentList": [], "since": "-200", "lastEvent": "-8", "started": "-1800",
-      "activity": ["Bash: npm test -- eventsub", "Write eventsub.ts", "WebFetch dev.twitch.tv"]
+      "id": "demo-4",
+      "project": "brainerd-api",
+      "branch": "main",
+      "state": "working",
+      "detail": null,
+      "needsYou": false,
+      "question": null,
+      "summary": "Building the Twitch EventSub webhook and verifying its signatures",
+      "summarySource": "summary",
+      "todo": {
+        "current": "Verify HMAC signatures",
+        "done": 3,
+        "total": 6
+      },
+      "subagents": 0,
+      "subagentList": [],
+      "since": "-200",
+      "lastEvent": "-8",
+      "started": "-1800",
+      "activity": [
+        "Bash: npm test -- eventsub",
+        "Write eventsub.ts",
+        "WebFetch dev.twitch.tv"
+      ]
     },
     {
-      "id": "demo-5", "project": "roku-slideshow", "branch": "master", "state": "waiting", "detail": "Done, waiting for you", "needsYou": false,
-      "question": null, "summary": "The Swift photo plugin compiles; next is a TestFlight build on the Mac", "summarySource": "message",
-      "todo": null, "subagents": 0, "subagentList": [], "since": "-660", "lastEvent": "-660", "started": "-5400",
-      "activity": ["Edit roku-slideshow.md", "Bash: Commit the plugin fix", "Read PhotosPlugin.swift"]
+      "id": "demo-5",
+      "project": "roku-slideshow",
+      "branch": "master",
+      "state": "waiting",
+      "detail": "Done, waiting for you",
+      "needsYou": false,
+      "question": null,
+      "summary": "The Swift photo plugin compiles; next is a TestFlight build on the Mac",
+      "summarySource": "message",
+      "todo": null,
+      "subagents": 0,
+      "subagentList": [],
+      "since": "-660",
+      "lastEvent": "-660",
+      "started": "-5400",
+      "activity": [
+        "Edit roku-slideshow.md",
+        "Bash: Commit the plugin fix",
+        "Read PhotosPlugin.swift"
+      ],
+      "lastMessage": "The Swift photo plugin compiles on the Mac.\n\n**What changed:**\n- `PhotosPlugin.swift` now loads the file representation, so HEIC and iCloud photos work\n- Thumbnails are made in the same pass\n\n**Next:** a TestFlight build."
     },
     {
-      "id": "demo-6", "project": "docs", "branch": "main", "state": "waiting", "detail": "You said no", "needsYou": false,
-      "question": null, "summary": "update the README to add a line at the bottom", "summarySource": "prompt",
-      "todo": null, "subagents": 0, "subagentList": [], "since": "-1500", "lastEvent": "-1500", "started": "-1600",
-      "activity": ["PowerShell: Append line to README", "PowerShell: Show end of README"]
+      "id": "demo-6",
+      "project": "docs",
+      "branch": "main",
+      "state": "waiting",
+      "detail": "You said no",
+      "needsYou": false,
+      "question": null,
+      "summary": "update the README to add a line at the bottom",
+      "summarySource": "prompt",
+      "todo": null,
+      "subagents": 0,
+      "subagentList": [],
+      "since": "-1500",
+      "lastEvent": "-1500",
+      "started": "-1600",
+      "activity": [
+        "PowerShell: Append line to README",
+        "PowerShell: Show end of README"
+      ]
     },
     {
-      "id": "demo-7", "project": "wedding", "branch": "main", "state": "stale", "detail": "No activity for 30 min", "needsYou": false,
-      "question": null, "summary": "Regenerating the RSVP export", "summarySource": "summary",
-      "todo": null, "subagents": 0, "subagentList": [], "since": "-2400", "lastEvent": "-2400", "started": "-4000",
-      "activity": ["Bash: node export.mjs"]
+      "id": "demo-7",
+      "project": "wedding",
+      "branch": "main",
+      "state": "stale",
+      "detail": "No activity for 30 min",
+      "needsYou": false,
+      "question": null,
+      "summary": "Regenerating the RSVP export",
+      "summarySource": "summary",
+      "todo": null,
+      "subagents": 0,
+      "subagentList": [],
+      "since": "-2400",
+      "lastEvent": "-2400",
+      "started": "-4000",
+      "activity": [
+        "Bash: node export.mjs"
+      ]
     }
   ]
 }

@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 import { parseArgs } from 'node:util';
 import { Board } from './state.mjs';
+import { Cast } from './cast.mjs';
 import { checkTranscript, hasOutcome } from './transcript.mjs';
 
 const { values: args } = parseArgs({
@@ -37,6 +38,20 @@ const board = new Board({
   onNewEventType: (name, keys) => args.verbose && log(`first ${name}: ${keys.join(', ')}`),
 });
 
+const CHARACTERS = join(import.meta.dirname, '..', 'characters');
+const cast = new Cast(CHARACTERS);
+if (args.verbose) log(`cast: ${cast.characters.map((c) => c.id).join(', ') || 'none'}`);
+
+function status() {
+  const snap = board.snapshot();
+  const active = snap.sessions.map((s) => s.id);
+  for (const s of snap.sessions) s.character = cast.describe(cast.assign(s.id, active));
+  return snap;
+}
+
+const SAFE_NAME = /^[\w-]+$/;
+const SAFE_FILE = /^[\w-]+\.(png|json)$/;
+
 const isLocal = (address = '') => {
   const ip = address.replace(/^::ffff:/, '');
   return ip === '::1' || /^(127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(ip);
@@ -52,7 +67,7 @@ function broadcast() {
     broadcastTimer = null;
     if (board.seq === lastSeq) return;
     lastSeq = board.seq;
-    const data = `data: ${JSON.stringify(board.snapshot())}\n\n`;
+    const data = `data: ${JSON.stringify(status())}\n\n`;
     for (const res of clients) res.write(data);
   }, BROADCAST_DELAY_MS);
 }
@@ -94,11 +109,11 @@ const server = createServer(async (req, res) => {
     }
     if (req.method === 'GET' && url.pathname === '/status') {
       res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'Access-Control-Allow-Origin': '*' });
-      return res.end(JSON.stringify(board.snapshot()));
+      return res.end(JSON.stringify(status()));
     }
     if (req.method === 'GET' && url.pathname === '/stream') {
       res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-store', Connection: 'keep-alive' });
-      res.write(`data: ${JSON.stringify(board.snapshot())}\n\n`);
+      res.write(`data: ${JSON.stringify(status())}\n\n`);
       clients.add(res);
       req.on('close', () => clients.delete(res));
       return;
@@ -106,6 +121,19 @@ const server = createServer(async (req, res) => {
     if (req.method === 'GET' && url.pathname === '/') {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
       return res.end(page());
+    }
+    const charFile = /^\/characters\/([^/]+)\/([^/]+)$/.exec(url.pathname);
+    if (req.method === 'GET' && charFile && SAFE_NAME.test(charFile[1]) && SAFE_FILE.test(charFile[2])) {
+      const path = join(CHARACTERS, charFile[1], charFile[2]);
+      if (!existsSync(path)) return res.writeHead(404).end();
+      res.writeHead(200, { 'Content-Type': charFile[2].endsWith('.png') ? 'image/png' : 'application/json', 'Cache-Control': 'no-cache', 'Access-Control-Allow-Origin': '*' });
+      return res.end(readFileSync(path));
+    }
+    if (req.method === 'GET' && url.pathname === '/characters/reload') {
+      cast.reload();
+      board.seq++;
+      broadcast();
+      return res.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify(cast.characters.map((c) => c.id)));
     }
     if (req.method === 'GET' && url.pathname === '/demo.json') {
       res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
