@@ -107,6 +107,10 @@ const server = createServer(async (req, res) => {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
       return res.end(page());
     }
+    if (req.method === 'GET' && url.pathname === '/demo.json') {
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+      return res.end(readFileSync(join(import.meta.dirname, 'public', 'demo.json')));
+    }
     res.writeHead(404).end();
   } catch (err) {
     if (args.verbose) log('error', err.message);

@@ -28,25 +28,40 @@
   .clock { margin-left: auto; font-size: 40px; font-variant-numeric: tabular-nums; color: var(--dim); }
   #banner { position: absolute; left: 0; right: 0; top: 0; padding: 22px 72px; background: var(--red); color: #fff; font-size: 34px; font-weight: 600; transform: translateY(-100%); transition: transform .35s ease; }
   #banner.show { transform: none; }
-  #grid { flex: 1; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(2, 1fr); gap: 28px; min-height: 0; }
-  .card { background: var(--card); border: 2px solid var(--line); border-radius: 22px; padding: 30px 34px; display: flex; flex-direction: column; gap: 14px; min-height: 0; overflow: hidden; position: relative; cursor: pointer; }
-  .card::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 10px; background: var(--accent, var(--grey)); }
-  .card.working { --accent: var(--green); }
-  .card.waiting { --accent: var(--amber); }
-  .card.needs_permission, .card.asking { --accent: var(--red); border-color: #ff4d3d99; box-shadow: 0 0 40px #ff4d3d33; }
-  .card.stale, .card.ended { opacity: .55; }
-  .top { display: flex; align-items: baseline; gap: 14px; }
-  .project { font-size: 40px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .branch { font-size: 24px; color: var(--dim); white-space: nowrap; }
-  .ago { margin-left: auto; font-size: 26px; color: var(--dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
-  .state { font-size: 30px; font-weight: 600; color: var(--accent, var(--dim)); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-  .summary { font-size: 32px; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-  .summary.prompt { color: var(--dim); font-style: italic; }
-  .question { font-size: 30px; line-height: 1.3; background: #ff4d3d1a; border-radius: 12px; padding: 14px 18px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-  .meta { margin-top: auto; font-size: 24px; color: var(--dim); display: flex; gap: 22px; white-space: nowrap; overflow: hidden; }
-  .meta span { overflow: hidden; text-overflow: ellipsis; }
-  .more { display: flex; align-items: center; justify-content: center; font-size: 40px; color: var(--dim); }
-  .empty { grid-column: 1 / -1; grid-row: 1 / -1; display: flex; align-items: center; justify-content: center; font-size: 48px; color: var(--dim); }
+  #rows { flex: 1; display: flex; flex-direction: column; gap: 16px; min-height: 0; }
+  .row { flex: 0 0 152px; background: var(--card); border: 2px solid var(--line); border-radius: 20px; padding: 16px 28px 16px 20px; display: grid; grid-template-columns: 104px minmax(0, 1fr) 520px 96px; column-gap: 28px; align-items: center; position: relative; overflow: hidden; cursor: pointer; }
+  .row::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 8px; background: var(--accent, var(--grey)); }
+  .row.working { --accent: var(--green); }
+  .row.waiting { --accent: var(--amber); }
+  .row.needs_permission, .row.asking { --accent: var(--red); border-color: #ff4d3d99; box-shadow: 0 0 36px #ff4d3d33; }
+  .row.stale, .row.ended { opacity: .55; }
+  .avatar { width: 96px; height: 96px; border-radius: 18px; background: var(--hue); display: flex; align-items: center; justify-content: center; font-size: 48px; font-weight: 700; color: #0d0f12; margin-left: 8px; box-shadow: 0 0 0 4px var(--accent, var(--grey)); image-rendering: pixelated; }
+  .row.needs_permission .avatar, .row.asking .avatar { animation: bob 1s ease-in-out infinite; }
+  .main { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .line1 { display: flex; align-items: baseline; gap: 16px; min-width: 0; white-space: nowrap; }
+  .project { font-size: 36px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; max-width: 60%; }
+  .branch { font-size: 22px; color: var(--dim); overflow: hidden; text-overflow: ellipsis; flex-shrink: 1; }
+  .state { font-size: 26px; font-weight: 600; color: var(--accent, var(--dim)); flex-shrink: 0; }
+  .request { font-size: 28px; line-height: 1.25; color: #ffd9d4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .request + .summary { -webkit-line-clamp: 1; color: var(--dim); font-size: 24px; }
+  .row.compact { flex-basis: 96px; padding-top: 10px; padding-bottom: 10px; grid-template-columns: 104px minmax(0, 1fr) 520px 96px; }
+  .row.compact .avatar { width: 64px; height: 64px; font-size: 32px; border-radius: 14px; margin-left: 24px; }
+  .row.compact .project { font-size: 30px; }
+  .row.compact .summary { -webkit-line-clamp: 1; font-size: 24px; }
+  .row.compact .activity div:nth-child(n + 2) { display: none; }
+  .activity .sub::before { content: "▸ "; color: var(--accent, var(--dim)); }
+  .summary { font-size: 28px; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .summary.prompt, .summary.message { color: var(--dim); }
+  .summary.prompt { font-style: italic; }
+  .question { font-size: 28px; line-height: 1.25; color: #ffd9d4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .question .options { color: var(--dim); font-size: 24px; }
+  .activity { font-size: 21px; line-height: 1.45; color: var(--dim); border-left: 2px solid var(--line); padding-left: 22px; min-width: 0; }
+  .activity div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .activity div:first-child { color: var(--text); }
+  .activity .tags { color: var(--text); }
+  .ago { font-size: 26px; color: var(--dim); font-variant-numeric: tabular-nums; text-align: right; }
+  .more { flex: 0 0 64px; display: flex; align-items: center; justify-content: center; font-size: 30px; color: var(--dim); }
+  .empty { flex: 1; display: flex; align-items: center; justify-content: center; font-size: 48px; color: var(--dim); }
   .offline { position: absolute; right: 72px; bottom: 28px; font-size: 24px; color: var(--amber); display: none; }
   .offline.show { display: block; }
   #detail { position: absolute; inset: 0; background: #0d0f12f2; padding: 72px 96px; display: none; flex-direction: column; gap: 22px; font-size: 30px; overflow: auto; }
@@ -56,6 +71,7 @@
   #detail ol { margin: 0; padding-left: 1.2em; line-height: 1.5; }
   #detail .close { position: absolute; right: 72px; top: 60px; font-size: 26px; color: var(--dim); }
   @keyframes pulse { 50% { box-shadow: 0 0 8px 2px #ff4d3d55; } }
+  @keyframes bob { 50% { transform: translateY(-6px); } }
 </style>
 </head>
 <body>
@@ -66,12 +82,11 @@
     <div class="counts" id="counts"></div>
     <div class="clock" id="clock"></div>
   </header>
-  <div id="grid"></div>
+  <div id="rows"></div>
   <div class="offline" id="offline">Can't reach the relay. Showing the last update.</div>
   <div id="detail"></div>
 </div>
 <script>
-  const MAX_CARDS = 6;
   const STATE_TEXT = { working: 'Working', waiting: 'Done, waiting for you', needs_permission: 'Needs permission', asking: 'Asked a question', stale: 'No activity for 30 min', ended: 'Ended' };
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -95,20 +110,40 @@
     return `${Math.floor(s / 3600)}h ${Math.floor((s % 3600) / 60)}m`;
   }
 
-  function card(s) {
-    const stateText = s.detail ?? STATE_TEXT[s.state];
-    const question = s.question ? `<div class="question">${esc(s.question.text)}</div>` : '';
-    const summary = s.summary ? `<div class="summary ${s.summarySource === 'prompt' ? 'prompt' : ''}">${esc(s.summary)}</div>` : '';
-    const meta = [
-      s.todo ? `<span>${s.todo.done}/${s.todo.total} tasks</span>` : '',
-      s.subagents ? `<span>${s.subagents} subagent${s.subagents > 1 ? 's' : ''} running</span>` : '',
-      s.activity[0] ? `<span>${esc(s.activity[0])}</span>` : '',
-    ].join('');
-    return `<div class="card ${s.state}" data-id="${s.id}">
-      <div class="top"><div class="project">${esc(s.project)}</div>${s.branch ? `<div class="branch">${esc(s.branch)}</div>` : ''}<div class="ago" data-since="${s.since}">${ago(s.since)}</div></div>
-      <div class="state">${esc(stateText)}</div>
-      ${question || summary}
-      <div class="meta">${meta}</div>
+  function hue(text) {
+    let h = 0;
+    for (const c of text) h = (h * 31 + c.charCodeAt(0)) % 360;
+    return `hsl(${h} 55% 62%)`;
+  }
+
+  const COMPACT = new Set(['waiting', 'stale', 'ended']);
+  const ROW_HEIGHT = { full: 152, compact: 96, gap: 16, more: 56 };
+
+  function splitDetail(s) {
+    const m = /^Needs permission(?:: (.*?))?(?: \(([^()]+)\))?$/.exec(s.detail ?? '');
+    if (s.state !== 'needs_permission' || !m) return { stateText: s.detail ?? STATE_TEXT[s.state], request: null };
+    return { stateText: m[2] ? `Needs permission · ${m[2]}` : 'Needs permission', request: m[1] ?? null };
+  }
+
+  function row(s) {
+    const { stateText, request } = splitDetail(s);
+    const summary = s.summary ? `<div class="summary ${s.summarySource ?? ''}">${esc(s.summary)}</div>` : '';
+    const body = s.question
+      ? `<div class="question">${esc(s.question.text)}${s.question.options.length ? ` <span class="options">${s.question.options.map(esc).join(' · ')}</span>` : ''}</div>`
+      : request
+        ? `<div class="request">${esc(request)}</div>${summary}`
+        : summary;
+    const tags = [s.todo && `${s.todo.done}/${s.todo.total} tasks`, s.subagents && `${s.subagents} subagent${s.subagents > 1 ? 's' : ''}`].filter(Boolean).join(' · ');
+    const lines = s.activity.slice(0, tags ? 2 : 3).map((a) => (a.startsWith('↳ ') ? `<div class="sub">${esc(a.slice(2))}</div>` : `<div>${esc(a)}</div>`));
+    if (tags) lines.push(`<div class="tags">${esc(tags)}</div>`);
+    return `<div class="row ${s.state}${COMPACT.has(s.state) ? ' compact' : ''}" data-id="${s.id}">
+      <div class="avatar" style="--hue:${hue(s.project)}">${esc(s.project[0]?.toUpperCase() ?? '?')}</div>
+      <div class="main">
+        <div class="line1"><span class="project">${esc(s.project)}</span>${s.branch ? `<span class="branch">${esc(s.branch)}</span>` : ''}<span class="state">${esc(stateText)}</span></div>
+        ${body}
+      </div>
+      <div class="activity">${lines.join('')}</div>
+      <div class="ago" data-since="${s.since}">${ago(s.since)}</div>
     </div>`;
   }
 
@@ -160,11 +195,25 @@
     seenNeedsYou = now;
   }
 
+  function fitRows(sessions, height) {
+    const cost = (s) => (COMPACT.has(s.state) ? ROW_HEIGHT.compact : ROW_HEIGHT.full);
+    let used = 0;
+    let count = 0;
+    for (const s of sessions) {
+      const next = used + (count ? ROW_HEIGHT.gap : 0) + cost(s);
+      const reserve = count + 1 < sessions.length ? ROW_HEIGHT.gap + ROW_HEIGHT.more : 0;
+      if (next + reserve > height) break;
+      used = next;
+      count++;
+    }
+    return sessions.slice(0, Math.max(count, 1));
+  }
+
   function render() {
     const sessions = status.sessions;
-    const shown = sessions.length > MAX_CARDS ? sessions.slice(0, MAX_CARDS - 1) : sessions;
-    $('grid').innerHTML = sessions.length
-      ? shown.map(card).join('') + (sessions.length > MAX_CARDS ? `<div class="card more">+${sessions.length - shown.length} more</div>` : '')
+    const shown = fitRows(sessions, $('rows').clientHeight);
+    $('rows').innerHTML = sessions.length
+      ? shown.map(row).join('') + (shown.length < sessions.length ? `<div class="more">+${sessions.length - shown.length} more</div>` : '')
       : '<div class="empty">No agents running</div>';
     const needs = sessions.filter((s) => s.needsYou).length;
     const working = sessions.filter((s) => s.state === 'working').length;
@@ -193,7 +242,15 @@
   }
 
   function connect() {
-    if (new URLSearchParams(location.search).has('poll')) {
+    const params = new URLSearchParams(location.search);
+    if (params.has('demo')) {
+      const at = (offset) => new Date(Date.now() + Number(offset) * 1000).toISOString();
+      fetch('/demo.json')
+        .then((r) => r.json())
+        .then((demo) => update({ ...demo, sessions: demo.sessions.map((s) => ({ ...s, since: at(s.since), lastEvent: at(s.lastEvent), started: at(s.started) })) }));
+      return;
+    }
+    if (params.has('poll')) {
       const poll = () =>
         fetch('/status')
           .then((r) => r.json())
@@ -208,8 +265,8 @@
     source.onerror = () => $('offline').classList.add('show');
   }
 
-  $('grid').addEventListener('click', (e) => {
-    const el = e.target.closest('.card[data-id]');
+  $('rows').addEventListener('click', (e) => {
+    const el = e.target.closest('.row[data-id]');
     if (el) {
       openId = el.dataset.id;
       render();
