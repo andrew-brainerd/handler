@@ -1,0 +1,26 @@
+{
+  "expressions": {
+    "needs_you": {
+      "frames": 9,
+      "at": "2026-10-30T22:55:59.467Z"
+    },
+    "shrug": {
+      "frames": 9,
+      "at": "2026-10-30T22:56:06.769Z"
+    },
+    "waiting": {
+      "frames": 5,
+      "at": "2026-10-30T22:56:07.341Z"
+    },
+    "stale": {
+      "frames": 9,
+      "at": "2026-10-30T22:56:10.726Z"
+    },
+    "working": {
+      "frames": 9,
+      "at": "2026-10-30T22:56:16.065Z"
+    }
+  },
+  "animal": "red fox",
+  "size": 64
+}

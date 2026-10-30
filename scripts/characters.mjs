@@ -1,40 +1,36 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseArgs } from 'node:util';
 import sharp from 'sharp';
 
 const API = 'https://api.pixellab.ai/v2';
 const ROOT = join(import.meta.dirname, '..', 'characters');
-const DIRECTION = 'south';
 
-const STATES = {
-  working: { action: 'busily typing on a keyboard, head bobbing, focused and productive', fps: 10, loop: true },
-  needs_you: { action: 'waving one arm high above the head to get attention, bouncing slightly', fps: 10, loop: true },
-  waiting: { template: 'breathing-idle', fps: 6, loop: true },
-  stale: { action: 'sitting down on the ground and dozing off asleep', fps: 6, loop: false },
-  shrug: { action: 'shrugging both shoulders with palms turned up', fps: 8, loop: false },
+const EXPRESSIONS = {
+  working: { action: 'focused and busy: eyes glance down and side to side as if reading, a small thoughtful nod', frames: 8, fps: 8, loop: true },
+  needs_you: { action: 'excited to get attention: ears perk up, eyebrows raise, eyes go wide, mouth opens as if calling out', frames: 8, fps: 10, loop: true },
+  waiting: { action: 'calm and content: a slow blink and a gentle ear twitch', frames: 4, fps: 5, loop: true, pingpong: true },
+  stale: { action: 'getting sleepy: eyelids droop, a big yawn, eyes close and the head nods down asleep', frames: 8, fps: 6, loop: false },
+  shrug: { action: 'puzzled: head tilts to one side, one eyebrow raises, a small unsure frown', frames: 8, fps: 8, loop: false },
 };
 
 const { values: args, positionals } = parseArgs({
   allowPositionals: true,
   options: {
-    description: { type: 'string' },
+    animal: { type: 'string' },
     size: { type: 'string', default: '64' },
-    states: { type: 'string' },
+    only: { type: 'string' },
+    redo: { type: 'boolean', default: false },
     seed: { type: 'string' },
   },
 });
 
 const key = process.env.PIXEL_LAB_API_KEY;
-if (!key) {
-  console.error('PIXEL_LAB_API_KEY is not set (run under infisical run)');
-  process.exit(1);
-}
-
 const log = (...parts) => console.log(new Date().toISOString().slice(11, 19), ...parts);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function api(method, path, body) {
+  if (!key) throw new Error('PIXEL_LAB_API_KEY is not set (run under infisical run)');
   const res = await fetch(API + path, {
     method,
     headers: { Authorization: `Bearer ${key}`, ...(body ? { 'Content-Type': 'application/json' } : {}) },
@@ -55,128 +51,119 @@ async function waitForJob(id, label) {
     }
     if (job.status === 'failed') throw new Error(`${label} failed: ${JSON.stringify(job.last_response).slice(0, 500)}`);
     if (Date.now() - started > 15 * 60e3) throw new Error(`${label} timed out`);
-    await sleep(5000);
+    await sleep(4000);
   }
 }
 
 const dirOf = (id) => join(ROOT, id);
-const statePath = (id) => join(dirOf(id), 'pixellab.json');
-const loadState = (id) => (existsSync(statePath(id)) ? JSON.parse(readFileSync(statePath(id), 'utf8')) : { animations: {} });
-const saveState = (id, state) => writeFileSync(statePath(id), JSON.stringify(state, null, 2) + '\n');
+const rawDir = (id) => join(dirOf(id), 'raw');
+const metaPath = (id) => join(dirOf(id), 'pixellab.json');
+const loadMeta = (id) => (existsSync(metaPath(id)) ? JSON.parse(readFileSync(metaPath(id), 'utf8')) : { expressions: {} });
+const saveMeta = (id, meta) => writeFileSync(metaPath(id), JSON.stringify(meta, null, 2) + '\n');
+const imageBytes = (img) => Buffer.from(img.base64 ?? img, 'base64');
 
 async function balance() {
   const b = await api('GET', '/balance');
-  log('balance', JSON.stringify(b));
-  return b;
+  log('balance', JSON.stringify(b.subscription ?? b));
 }
 
 async function create(id) {
-  if (!args.description) throw new Error('--description is required');
-  mkdirSync(dirOf(id), { recursive: true });
-  const state = loadState(id);
-  if (state.characterId) return log(`${id}: already created as ${state.characterId}`);
+  const meta = loadMeta(id);
+  if (existsSync(join(rawDir(id), 'base.png')) && !args.redo) return log(`${id}: base head exists (use --redo to replace)`);
+  const animal = args.animal ?? meta.animal;
+  if (!animal) throw new Error('--animal is required');
+  mkdirSync(rawDir(id), { recursive: true });
   const size = Number(args.size);
-  const res = await api('POST', '/create-character-v3', {
-    description: args.description,
-    name: id,
+  const res = await api('POST', '/create-image-pixen', {
+    description: `head of a cute ${animal}, front view looking straight at the viewer, expressive big eyes, friendly, head and a little of the neck only, centered`,
     image_size: { width: size, height: size },
-    view: 'low top-down',
+    view: 'side',
+    direction: 'south',
+    outline: 'single color black outline',
+    detail: 'medium detail',
     no_background: true,
     ...(args.seed ? { seed: Number(args.seed) } : {}),
   });
-  log(`${id}: create → character ${res.character_id}, job ${res.background_job_id}`, res.usage ? JSON.stringify(res.usage) : '');
-  state.characterId = res.character_id;
-  state.description = args.description;
-  state.size = size;
-  saveState(id, state);
-  await waitForJob(res.background_job_id, `${id} create`);
+  writeFileSync(join(rawDir(id), 'base.png'), imageBytes(res.image));
+  Object.assign(meta, { animal, size, expressions: args.redo ? {} : meta.expressions });
+  saveMeta(id, meta);
+  log(`${id}: base head (${animal})`, res.usage ? JSON.stringify(res.usage) : '');
 }
 
 async function animate(id) {
-  const state = loadState(id);
-  if (!state.characterId) throw new Error(`${id}: create it first`);
-  const wanted = args.states ? args.states.split(',') : Object.keys(STATES);
-  const jobs = [];
-  for (const name of wanted) {
-    if (state.animations[name]) {
-      log(`${id}/${name}: already animated`);
-      continue;
-    }
-    const spec = STATES[name];
-    const body = spec.template
-      ? { character_id: state.characterId, mode: 'template', template_animation_id: spec.template, animation_name: name, directions: [DIRECTION] }
-      : { character_id: state.characterId, mode: 'v3', action_description: spec.action, animation_name: name, directions: [DIRECTION], frame_count: 8 };
-    const res = await api('POST', '/characters/animations', body);
-    log(`${id}/${name}: animate → group ${res.animation_group_id}, jobs ${res.background_job_ids?.join(',')}`, res.usage ? JSON.stringify(res.usage) : '');
-    state.animations[name] = res.animation_group_id;
-    saveState(id, state);
-    for (const job of res.background_job_ids ?? []) jobs.push(waitForJob(job, `${id}/${name}`));
-  }
-  await Promise.all(jobs);
+  const meta = loadMeta(id);
+  const base = readFileSync(join(rawDir(id), 'base.png')).toString('base64');
+  const wanted = args.only ? args.only.split(',') : Object.keys(EXPRESSIONS);
+  await Promise.all(
+    wanted.map(async (name) => {
+      if (meta.expressions[name] && !(args.redo && args.only)) return log(`${id}/${name}: already animated`);
+      const spec = EXPRESSIONS[name];
+      const res = await api('POST', '/animate-with-text-v3', {
+        first_frame: { type: 'base64', base64: base },
+        action: spec.action,
+        frame_count: spec.frames,
+        no_background: true,
+      });
+      log(`${id}/${name}: job ${res.background_job_id}`, res.usage ? JSON.stringify(res.usage) : '');
+      const job = await waitForJob(res.background_job_id, `${id}/${name}`);
+      const images = job.last_response?.images ?? [];
+      if (!images.length) throw new Error(`${id}/${name}: no frames in ${JSON.stringify(job.last_response).slice(0, 300)}`);
+      images.forEach((img, i) => writeFileSync(join(rawDir(id), `${name}-${String(i).padStart(2, '0')}.png`), imageBytes(img)));
+      meta.expressions[name] = { frames: images.length, at: new Date().toISOString() };
+      saveMeta(id, meta);
+    }),
+  );
 }
 
-async function download(url) {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`GET ${url} → ${res.status}`);
-  return Buffer.from(await res.arrayBuffer());
-}
-
-async function exportCharacter(id) {
-  const state = loadState(id);
-  const character = await api('GET', `/characters/${state.characterId}`);
-  if (character.status !== 'completed') throw new Error(`${id}: character status ${character.status}`);
-  const still = await download(character.rotation_urls[DIRECTION]);
+async function exportHead(id) {
+  const meta = loadMeta(id);
+  const files = readdirSync(rawDir(id));
   const strips = {};
-  for (const [name, groupId] of Object.entries(state.animations)) {
-    const group = character.animations?.find((a) => a.animation_group_id === groupId);
-    const dir = group?.directions?.find((d) => d.direction === DIRECTION);
-    if (!dir?.frames?.length) {
-      log(`${id}/${name}: no frames yet`);
-      continue;
-    }
-    strips[name] = await Promise.all(dir.frames.map(download));
-  }
+  for (const name of Object.keys(meta.expressions)) strips[name] = files.filter((f) => f.startsWith(`${name}-`)).sort().map((f) => readFileSync(join(rawDir(id), f)));
+  const base = readFileSync(join(rawDir(id), 'base.png'));
+  const everything = [base, ...Object.values(strips).flat()];
 
-  const sizes = await Promise.all([still, ...Object.values(strips).flat()].map((f) => sharp(f).metadata()));
-  const frame = { w: Math.max(...sizes.map((m) => m.width)), h: Math.max(...sizes.map((m) => m.height)) };
-  const transparent = { r: 0, g: 0, b: 0, alpha: 0 };
+  const sizes = await Promise.all(everything.map((f) => sharp(f).metadata()));
+  const cell = { w: Math.max(...sizes.map((m) => m.width)), h: Math.max(...sizes.map((m) => m.height)) };
+  const clear = { r: 0, g: 0, b: 0, alpha: 0 };
   const centred = async (input) => {
     const m = await sharp(input).metadata();
-    const left = Math.floor((frame.w - m.width) / 2);
-    const top = Math.floor((frame.h - m.height) / 2);
-    return sharp(input).extend({ left, right: frame.w - m.width - left, top, bottom: frame.h - m.height - top, background: transparent }).png().toBuffer();
+    const left = Math.floor((cell.w - m.width) / 2);
+    const top = Math.floor((cell.h - m.height) / 2);
+    return sharp(input).ensureAlpha().extend({ left, right: cell.w - m.width - left, top, bottom: cell.h - m.height - top, background: clear }).png().toBuffer();
   };
-  const all = await Promise.all([still, ...Object.values(strips).flat()].map(centred));
-  let box = { x0: frame.w, y0: frame.h, x1: 0, y1: 0 };
-  for (const cell of all) {
-    const { data } = await sharp(cell).raw().toBuffer({ resolveWithObject: true });
-    for (let y = 0; y < frame.h; y++)
-      for (let x = 0; x < frame.w; x++)
-        if (data[(y * frame.w + x) * 4 + 3] > 0) box = { x0: Math.min(box.x0, x), y0: Math.min(box.y0, y), x1: Math.max(box.x1, x), y1: Math.max(box.y1, y) };
+
+  let box = { x0: cell.w, y0: cell.h, x1: 0, y1: 0 };
+  for (const frame of everything) {
+    const { data } = await sharp(await centred(frame)).raw().toBuffer({ resolveWithObject: true });
+    for (let y = 0; y < cell.h; y++)
+      for (let x = 0; x < cell.w; x++)
+        if (data[(y * cell.w + x) * 4 + 3] > 0) box = { x0: Math.min(box.x0, x), y0: Math.min(box.y0, y), x1: Math.max(box.x1, x), y1: Math.max(box.y1, y) };
   }
-  const side = Math.min(Math.max(box.x1 - box.x0, box.y1 - box.y0) + 3, frame.w, frame.h);
+  const side = Math.min(Math.max(box.x1 - box.x0, box.y1 - box.y0) + 3, cell.w, cell.h);
   const crop = {
-    left: Math.max(0, Math.min(frame.w - side, Math.floor((box.x0 + box.x1 - side) / 2))),
-    top: Math.max(0, Math.min(frame.h - side, box.y1 + 2 - side)),
+    left: Math.max(0, Math.min(cell.w - side, Math.floor((box.x0 + box.x1 - side) / 2))),
+    top: Math.max(0, Math.min(cell.h - side, Math.floor((box.y0 + box.y1 - side) / 2))),
     width: side,
     height: side,
   };
-  log(`${id}: frame sizes ${[...new Set(sizes.map((m) => `${m.width}x${m.height}`))].join(', ')} → cell ${frame.w}x${frame.h}, cropped to ${side}x${side}`);
-  const tight = (cell) => sharp(cell).extract(crop).png().toBuffer();
-  const cellFrame = { w: side, h: side };
+  const tight = async (frame) => sharp(await centred(frame)).extract(crop).png().toBuffer();
+  log(`${id}: frame sizes ${[...new Set(sizes.map((m) => `${m.width}x${m.height}`))].join(', ')} → ${side}x${side}`);
 
-  const out = { id, name: id, description: state.description, frame: cellFrame, still: 'still.png', states: {} };
-  writeFileSync(join(dirOf(id), 'still.png'), await tight(await centred(still)));
+  const out = { id, name: meta.animal, kind: 'head', frame: { w: side, h: side }, still: 'still.png', states: {} };
+  writeFileSync(join(dirOf(id), 'still.png'), await tight(base));
   for (const [name, frames] of Object.entries(strips)) {
-    const cells = await Promise.all(frames.map(async (f) => tight(await centred(f))));
-    await sharp({ create: { width: side * cells.length, height: side, channels: 4, background: transparent } })
+    const spec = EXPRESSIONS[name];
+    const played = spec?.pingpong ? [...frames, ...frames.slice(1, -1).reverse()] : frames;
+    const cells = await Promise.all(played.map(tight));
+    await sharp({ create: { width: side * cells.length, height: side, channels: 4, background: clear } })
       .composite(cells.map((input, i) => ({ input, left: i * side, top: 0 })))
       .png()
       .toFile(join(dirOf(id), `${name}.png`));
-    out.states[name] = { file: `${name}.png`, frames: cells.length, fps: STATES[name]?.fps ?? 8, loop: STATES[name]?.loop ?? true };
-    log(`${id}/${name}: ${cells.length} frames → ${name}.png`);
+    out.states[name] = { file: `${name}.png`, frames: cells.length, fps: spec?.fps ?? 8, loop: spec?.loop ?? true };
   }
   writeFileSync(join(dirOf(id), 'character.json'), JSON.stringify(out, null, 2) + '\n');
+  log(`${id}: exported ${Object.keys(out.states).join(', ')}`);
 }
 
 const [command, id] = positionals;
@@ -184,18 +171,18 @@ const commands = {
   balance,
   create: () => create(id),
   animate: () => animate(id),
-  export: () => exportCharacter(id),
+  export: () => exportHead(id),
   all: async () => {
     await balance();
     await create(id);
     await animate(id);
-    await exportCharacter(id);
+    await exportHead(id);
     await balance();
   },
 };
 
 if (!commands[command] || (command !== 'balance' && !id)) {
-  console.error('usage: node scripts/characters.mjs balance | create|animate|export|all <id> [--description "..."] [--size 64] [--states a,b] [--seed n]');
+  console.error('usage: node scripts/characters.mjs balance | create|animate|export|all <id> [--animal "red fox"] [--size 64] [--only working,stale] [--redo] [--seed n]');
   process.exit(1);
 }
 await commands[command]();

@@ -1,0 +1,42 @@
+{
+  "id": "fox",
+  "name": "red fox",
+  "kind": "head",
+  "frame": {
+    "w": 64,
+    "h": 64
+  },
+  "still": "still.png",
+  "states": {
+    "needs_you": {
+      "file": "needs_you.png",
+      "frames": 9,
+      "fps": 10,
+      "loop": true
+    },
+    "shrug": {
+      "file": "shrug.png",
+      "frames": 9,
+      "fps": 8,
+      "loop": false
+    },
+    "waiting": {
+      "file": "waiting.png",
+      "frames": 8,
+      "fps": 5,
+      "loop": true
+    },
+    "stale": {
+      "file": "stale.png",
+      "frames": 9,
+      "fps": 6,
+      "loop": false
+    },
+    "working": {
+      "file": "working.png",
+      "frames": 9,
+      "fps": 8,
+      "loop": true
+    }
+  }
+}
