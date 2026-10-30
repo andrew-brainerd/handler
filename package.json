@@ -1,0 +1,15 @@
+{
+  "name": "tally",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "relay": "node relay/server.mjs --verbose",
+    "install-hooks": "node scripts/hooks.mjs install",
+    "uninstall-hooks": "node scripts/hooks.mjs uninstall",
+    "replay": "node scripts/replay.mjs",
+    "test": "node --test"
+  }
+}

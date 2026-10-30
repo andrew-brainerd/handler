@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Tally</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --bg: #0d0f12;
+    --card: #171a1f;
+    --line: #262a31;
+    --text: #e8e6e1;
+    --dim: #8b8f97;
+    --red: #ff4d3d;
+    --amber: #f2b33d;
+    --green: #4fd18b;
+    --grey: #5b6068;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #000; color: var(--text); font-family: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif; overflow: hidden; }
+  #stage { position: absolute; width: 1920px; height: 1080px; left: 0; top: 0; transform-origin: 0 0; background: var(--bg); padding: 56px 72px; display: flex; flex-direction: column; gap: 36px; }
+  header { display: flex; align-items: baseline; gap: 28px; }
+  .brand { font-size: 44px; font-weight: 700; letter-spacing: .02em; display: flex; align-items: center; gap: 16px; }
+  .lamp { width: 22px; height: 22px; border-radius: 50%; background: var(--grey); box-shadow: 0 0 0 4px #ffffff10; transition: background .3s, box-shadow .3s; }
+  .lamp.live { background: var(--red); box-shadow: 0 0 24px 6px #ff4d3d88; animation: pulse 1.6s ease-in-out infinite; }
+  .counts { font-size: 30px; color: var(--dim); }
+  .counts b { color: var(--text); font-weight: 600; }
+  .clock { margin-left: auto; font-size: 40px; font-variant-numeric: tabular-nums; color: var(--dim); }
+  #banner { position: absolute; left: 0; right: 0; top: 0; padding: 22px 72px; background: var(--red); color: #fff; font-size: 34px; font-weight: 600; transform: translateY(-100%); transition: transform .35s ease; }
+  #banner.show { transform: none; }
+  #grid { flex: 1; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(2, 1fr); gap: 28px; min-height: 0; }
+  .card { background: var(--card); border: 2px solid var(--line); border-radius: 22px; padding: 30px 34px; display: flex; flex-direction: column; gap: 14px; min-height: 0; overflow: hidden; position: relative; cursor: pointer; }
+  .card::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 10px; background: var(--accent, var(--grey)); }
+  .card.working { --accent: var(--green); }
+  .card.waiting { --accent: var(--amber); }
+  .card.needs_permission, .card.asking { --accent: var(--red); border-color: #ff4d3d99; box-shadow: 0 0 40px #ff4d3d33; }
+  .card.stale, .card.ended { opacity: .55; }
+  .top { display: flex; align-items: baseline; gap: 14px; }
+  .project { font-size: 40px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .branch { font-size: 24px; color: var(--dim); white-space: nowrap; }
+  .ago { margin-left: auto; font-size: 26px; color: var(--dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .state { font-size: 30px; font-weight: 600; color: var(--accent, var(--dim)); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .summary { font-size: 32px; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .summary.prompt { color: var(--dim); font-style: italic; }
+  .question { font-size: 30px; line-height: 1.3; background: #ff4d3d1a; border-radius: 12px; padding: 14px 18px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .meta { margin-top: auto; font-size: 24px; color: var(--dim); display: flex; gap: 22px; white-space: nowrap; overflow: hidden; }
+  .meta span { overflow: hidden; text-overflow: ellipsis; }
+  .more { display: flex; align-items: center; justify-content: center; font-size: 40px; color: var(--dim); }
+  .empty { grid-column: 1 / -1; grid-row: 1 / -1; display: flex; align-items: center; justify-content: center; font-size: 48px; color: var(--dim); }
+  .offline { position: absolute; right: 72px; bottom: 28px; font-size: 24px; color: var(--amber); display: none; }
+  .offline.show { display: block; }
+  #detail { position: absolute; inset: 0; background: #0d0f12f2; padding: 72px 96px; display: none; flex-direction: column; gap: 22px; font-size: 30px; overflow: auto; }
+  #detail.show { display: flex; }
+  #detail h2 { font-size: 52px; margin: 0; }
+  #detail .label { color: var(--dim); font-size: 24px; text-transform: uppercase; letter-spacing: .08em; margin-top: 12px; }
+  #detail ol { margin: 0; padding-left: 1.2em; line-height: 1.5; }
+  #detail .close { position: absolute; right: 72px; top: 60px; font-size: 26px; color: var(--dim); }
+  @keyframes pulse { 50% { box-shadow: 0 0 8px 2px #ff4d3d55; } }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="banner"></div>
+  <header>
+    <div class="brand"><span class="lamp" id="lamp"></span>Tally</div>
+    <div class="counts" id="counts"></div>
+    <div class="clock" id="clock"></div>
+  </header>
+  <div id="grid"></div>
+  <div class="offline" id="offline">Can't reach the relay. Showing the last update.</div>
+  <div id="detail"></div>
+</div>
+<script>
+  const MAX_CARDS = 6;
+  const STATE_TEXT = { working: 'Working', waiting: 'Done, waiting for you', needs_permission: 'Needs permission', asking: 'Asked a question', stale: 'No activity for 30 min', ended: 'Ended' };
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+  let status = { sessions: [] };
+  let seenNeedsYou = new Set();
+  let openId = null;
+  let bannerTimer = null;
+
+  function fit() {
+    const stage = $('stage');
+    const scale = Math.min(innerWidth / 1920, innerHeight / 1080);
+    stage.style.left = `${innerWidth / 2 - (1920 * scale) / 2}px`;
+    stage.style.top = `${innerHeight / 2 - (1080 * scale) / 2}px`;
+    stage.style.transform = `scale(${scale})`;
+  }
+
+  function ago(iso) {
+    const s = Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 1000));
+    if (s < 60) return `${s}s`;
+    if (s < 3600) return `${Math.floor(s / 60)}m`;
+    return `${Math.floor(s / 3600)}h ${Math.floor((s % 3600) / 60)}m`;
+  }
+
+  function card(s) {
+    const stateText = s.detail ?? STATE_TEXT[s.state];
+    const question = s.question ? `<div class="question">${esc(s.question.text)}</div>` : '';
+    const summary = s.summary ? `<div class="summary ${s.summarySource === 'prompt' ? 'prompt' : ''}">${esc(s.summary)}</div>` : '';
+    const meta = [
+      s.todo ? `<span>${s.todo.done}/${s.todo.total} tasks</span>` : '',
+      s.subagents ? `<span>${s.subagents} subagent${s.subagents > 1 ? 's' : ''} running</span>` : '',
+      s.activity[0] ? `<span>${esc(s.activity[0])}</span>` : '',
+    ].join('');
+    return `<div class="card ${s.state}" data-id="${s.id}">
+      <div class="top"><div class="project">${esc(s.project)}</div>${s.branch ? `<div class="branch">${esc(s.branch)}</div>` : ''}<div class="ago" data-since="${s.since}">${ago(s.since)}</div></div>
+      <div class="state">${esc(stateText)}</div>
+      ${question || summary}
+      <div class="meta">${meta}</div>
+    </div>`;
+  }
+
+  function detail(s) {
+    if (!s) return '';
+    const subs = s.subagentList.map((a) => `<li>${esc(a.type ?? 'subagent')}: ${esc(a.description ?? '')} (${esc(STATE_TEXT[a.state] ?? a.state)})</li>`).join('');
+    return `<div class="close">Esc to close</div>
+      <h2>${esc(s.project)}${s.branch ? ` <span style="color:var(--dim);font-size:32px">${esc(s.branch)}</span>` : ''}</h2>
+      <div style="color:var(--dim)">${esc(s.detail ?? STATE_TEXT[s.state])} · started ${new Date(s.started).toLocaleTimeString()} · ${esc(s.host ?? '')}</div>
+      ${s.question ? `<div class="label">Question</div><div>${esc(s.question.text)}</div><div style="color:var(--dim)">${s.question.options.map(esc).join(' · ')}</div>` : ''}
+      <div class="label">Summary</div><div>${esc(s.summary ?? '—')}</div>
+      ${s.todo ? `<div class="label">Tasks</div><div>${s.todo.done} of ${s.todo.total} done${s.todo.current ? ` · now: ${esc(s.todo.current)}` : ''}</div>` : ''}
+      ${subs ? `<div class="label">Subagents</div><ol>${subs}</ol>` : ''}
+      ${s.lastMessage ? `<div class="label">Last message</div><div style="color:var(--dim)">${esc(s.lastMessage)}</div>` : ''}
+      <div class="label">Recent activity</div><ol>${s.activity.map((a) => `<li>${esc(a)}</li>`).join('')}</ol>`;
+  }
+
+  function chime() {
+    try {
+      const ctx = (chime.ctx ??= new AudioContext());
+      [880, 1320].forEach((f, i) => {
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.frequency.value = f;
+        g.gain.setValueAtTime(0.0001, ctx.currentTime + i * 0.18);
+        g.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime + i * 0.18 + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + i * 0.18 + 0.5);
+        o.connect(g).connect(ctx.destination);
+        o.start(ctx.currentTime + i * 0.18);
+        o.stop(ctx.currentTime + i * 0.18 + 0.55);
+      });
+    } catch {}
+  }
+
+  function alertNew(sessions) {
+    const now = new Set();
+    for (const s of sessions) {
+      if (!s.needsYou) continue;
+      const key = `${s.id}|${s.since}`;
+      now.add(key);
+      if (!seenNeedsYou.has(key)) {
+        $('banner').textContent = `${s.project}: ${s.question ? 'asked a question' : (s.detail ?? 'needs you').replace(/^Needs permission: /, 'needs permission for ')}`;
+        $('banner').classList.add('show');
+        clearTimeout(bannerTimer);
+        bannerTimer = setTimeout(() => $('banner').classList.remove('show'), 10000);
+        chime();
+      }
+    }
+    seenNeedsYou = now;
+  }
+
+  function render() {
+    const sessions = status.sessions;
+    const shown = sessions.length > MAX_CARDS ? sessions.slice(0, MAX_CARDS - 1) : sessions;
+    $('grid').innerHTML = sessions.length
+      ? shown.map(card).join('') + (sessions.length > MAX_CARDS ? `<div class="card more">+${sessions.length - shown.length} more</div>` : '')
+      : '<div class="empty">No agents running</div>';
+    const needs = sessions.filter((s) => s.needsYou).length;
+    const working = sessions.filter((s) => s.state === 'working').length;
+    const waiting = sessions.filter((s) => s.state === 'waiting').length;
+    $('counts').innerHTML = sessions.length ? [needs && `<b>${needs}</b> need you`, working && `<b>${working}</b> working`, waiting && `<b>${waiting}</b> waiting`].filter(Boolean).join(' · ') : '';
+    $('lamp').classList.toggle('live', needs > 0);
+    document.title = needs ? `(${needs}) Tally` : 'Tally';
+    $('detail').innerHTML = detail(sessions.find((s) => s.id === openId));
+    $('detail').classList.toggle('show', Boolean(openId && sessions.some((s) => s.id === openId)));
+  }
+
+  function tick() {
+    $('clock').textContent = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    document.querySelectorAll('.ago').forEach((el) => (el.textContent = ago(el.dataset.since)));
+  }
+
+  let first = true;
+  function update(next) {
+    status = next;
+    if (first) {
+      seenNeedsYou = new Set(status.sessions.filter((s) => s.needsYou).map((s) => `${s.id}|${s.since}`));
+      first = false;
+    } else alertNew(status.sessions);
+    $('offline').classList.remove('show');
+    render();
+  }
+
+  function connect() {
+    if (new URLSearchParams(location.search).has('poll')) {
+      const poll = () =>
+        fetch('/status')
+          .then((r) => r.json())
+          .then(update)
+          .catch(() => $('offline').classList.add('show'));
+      poll();
+      setInterval(poll, 3000);
+      return;
+    }
+    const source = new EventSource('/stream');
+    source.onmessage = (m) => update(JSON.parse(m.data));
+    source.onerror = () => $('offline').classList.add('show');
+  }
+
+  $('grid').addEventListener('click', (e) => {
+    const el = e.target.closest('.card[data-id]');
+    if (el) {
+      openId = el.dataset.id;
+      render();
+    }
+  });
+  $('detail').addEventListener('click', () => {
+    openId = null;
+    render();
+  });
+  addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      openId = null;
+      render();
+    }
+  });
+  addEventListener('resize', fit);
+  fit();
+  tick();
+  setInterval(tick, 1000);
+  connect();
+</script>
+</body>
+</html>
