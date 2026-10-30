@@ -136,8 +136,13 @@ const server = createServer(async (req, res) => {
       return res.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify(cast.characters.map((c) => c.id)));
     }
     if (req.method === 'GET' && url.pathname === '/demo.json') {
+      const demo = JSON.parse(readFileSync(join(import.meta.dirname, 'public', 'demo.json'), 'utf8'));
+      const ids = cast.characters.map((c) => c.id);
+      demo.sessions.forEach((s, i) => {
+        if (ids.length) s.character = cast.describe({ character: ids[i % ids.length], tint: Math.floor(i / ids.length) * 55 });
+      });
       res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
-      return res.end(readFileSync(join(import.meta.dirname, 'public', 'demo.json')));
+      return res.end(JSON.stringify(demo));
     }
     res.writeHead(404).end();
   } catch (err) {

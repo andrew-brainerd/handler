@@ -43,8 +43,9 @@
   .row.stale, .row.ended { opacity: .55; }
   .avatar { width: 96px; height: 96px; border-radius: 18px; background: var(--hue); display: flex; align-items: center; justify-content: center; font-size: 48px; font-weight: 700; color: #0d0f12; margin-left: 8px; box-shadow: 0 0 0 4px var(--accent, var(--grey)); image-rendering: pixelated; }
   .row.needs_permission .avatar:not(.sprite), .row.asking .avatar:not(.sprite) { animation: bob 1s ease-in-out infinite; }
-  .avatar.sprite { background-color: #0f1216; background-image: var(--sheet); background-repeat: no-repeat; background-size: calc(var(--frames) * 100%) 100%; animation: sprite var(--dur) steps(var(--frames), jump-none) var(--iter) both; filter: hue-rotate(var(--tint)); }
-  .avatar.sprite.still { background-size: 100% 100%; animation: none; }
+  .avatar.sprite { background: #0f1216; overflow: hidden; }
+  .avatar.sprite .img { width: 100%; height: 100%; background-image: var(--sheet); background-repeat: no-repeat; background-size: calc(var(--frames) * 100%) 100%; image-rendering: pixelated; animation: sprite var(--dur) steps(var(--frames), jump-none) var(--iter) both; filter: hue-rotate(var(--tint)); }
+  .avatar.sprite.still .img { background-size: 100% 100%; animation: none; }
   .main { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
   .line1 { display: flex; align-items: baseline; gap: 16px; min-width: 0; white-space: nowrap; }
   .project { font-size: 36px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; max-width: 60%; }
@@ -156,6 +157,7 @@
     const anim = key.split('|')[3];
     const el = document.createElement('div');
     el.className = 'avatar sprite';
+    el.innerHTML = '<div class="img"></div>';
     el.style.setProperty('--tint', `${c.tint}deg`);
     if (anim === 'still') {
       el.classList.add('still');
