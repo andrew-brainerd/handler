@@ -1,24 +1,24 @@
 {
   "expressions": {
-    "waiting": {
-      "frames": 5,
-      "at": "2026-10-31T00:14:56.476Z"
-    },
     "working": {
       "frames": 9,
-      "at": "2026-10-31T00:15:30.596Z"
+      "at": "2026-10-31T00:17:18.248Z"
     },
-    "shrug": {
+    "puzzled": {
       "frames": 9,
       "at": "2026-10-31T00:15:51.196Z"
     },
-    "stale": {
+    "sleepy": {
       "frames": 9,
       "at": "2026-10-31T00:16:41.145Z"
     },
-    "needs_you": {
+    "bored": {
       "frames": 9,
-      "at": "2026-10-31T00:17:18.248Z"
+      "at": "2026-10-31T00:35:59.325Z"
+    },
+    "sleeping": {
+      "frames": 9,
+      "at": "2026-10-31T00:33:15.947Z"
     }
   },
   "animal": "red fox",

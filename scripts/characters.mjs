@@ -9,11 +9,11 @@ const ROOT = join(import.meta.dirname, '..', 'characters');
 const STYLE = 'anime cel-shaded style, flat colors with two-tone hard-edged shadows, clean bold lines, vibrant saturated palette';
 
 const EXPRESSIONS = {
-  working: { action: 'focused and busy: eyes glance down and side to side as if reading, a small thoughtful nod', frames: 8, fps: 8, loop: true },
-  needs_you: { action: 'excited to get attention: ears perk up, eyebrows raise, eyes go wide, mouth opens as if calling out', frames: 8, fps: 10, loop: true },
-  waiting: { action: 'calm and content: a slow blink and a gentle ear twitch', frames: 4, fps: 5, loop: true, pingpong: true },
-  stale: { action: 'getting sleepy: eyelids droop, a big yawn, eyes close and the head nods down asleep', frames: 8, fps: 6, loop: false },
-  shrug: { action: 'puzzled: head tilts to one side, one eyebrow raises, a small unsure frown', frames: 8, fps: 8, loop: false },
+  working: { action: 'excited to get attention: ears perk up, eyebrows raise, eyes go wide, mouth opens as if calling out', frames: 8, fps: 10, loop: true },
+  puzzled: { action: 'puzzled: head tilts to one side, one eyebrow raises, a small unsure frown', frames: 8, fps: 8, loop: false },
+  bored: { action: 'bored and unimpressed, eyes stay open the whole time: flat half-lidded stare, eyes roll up and to the side, mouth pulls into a flat sideways frown, a slow sigh', frames: 8, fps: 6, loop: true, pingpong: true },
+  sleepy: { action: 'getting sleepy: eyelids droop, a big yawn, eyes close and the head nods down asleep', frames: 8, fps: 6, loop: false },
+  sleeping: { from: 'sleepy', action: 'fast asleep with eyes closed: slow breathing, the head gently rises and falls, a tiny ear twitch', frames: 8, fps: 5, loop: true, pingpong: true },
 };
 
 const { values: args, positionals } = parseArgs({
@@ -96,14 +96,19 @@ async function create(id) {
 
 async function animate(id) {
   const meta = loadMeta(id);
-  const base = readFileSync(join(rawDir(id), 'base.png')).toString('base64');
   const wanted = args.only ? args.only.split(',') : Object.keys(EXPRESSIONS);
-  await Promise.all(
-    wanted.map(async (name) => {
+  const firstFrame = (spec) => {
+    if (!spec.from) return readFileSync(join(rawDir(id), 'base.png')).toString('base64');
+    const frames = readdirSync(rawDir(id)).filter((f) => f.startsWith(`${spec.from}-`)).sort();
+    if (!frames.length) throw new Error(`${id}: animate ${spec.from} first`);
+    return readFileSync(join(rawDir(id), frames.at(-1))).toString('base64');
+  };
+  const run = (names) => Promise.all(
+    names.map(async (name) => {
       if (meta.expressions[name] && !(args.redo && args.only)) return log(`${id}/${name}: already animated`);
       const spec = EXPRESSIONS[name];
       const res = await api('POST', '/animate-with-text-v3', {
-        first_frame: { type: 'base64', base64: base },
+        first_frame: { type: 'base64', base64: firstFrame(spec) },
         action: spec.action,
         frame_count: spec.frames,
         no_background: true,
@@ -117,13 +122,15 @@ async function animate(id) {
       saveMeta(id, meta);
     }),
   );
+  await run(wanted.filter((n) => !EXPRESSIONS[n].from));
+  await run(wanted.filter((n) => EXPRESSIONS[n].from));
 }
 
 async function exportHead(id) {
   const meta = loadMeta(id);
   const files = readdirSync(rawDir(id));
   const strips = {};
-  for (const name of Object.keys(meta.expressions)) strips[name] = files.filter((f) => f.startsWith(`${name}-`)).sort().map((f) => readFileSync(join(rawDir(id), f)));
+  for (const name of Object.keys(meta.expressions).filter((n) => EXPRESSIONS[n])) strips[name] = files.filter((f) => f.startsWith(`${name}-`)).sort().map((f) => readFileSync(join(rawDir(id), f)));
   const base = readFileSync(join(rawDir(id), 'base.png'));
   const everything = [base, ...Object.values(strips).flat()];
 

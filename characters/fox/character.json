@@ -8,34 +8,34 @@
   },
   "still": "still.png",
   "states": {
-    "waiting": {
-      "file": "waiting.png",
-      "frames": 8,
-      "fps": 5,
-      "loop": true
-    },
     "working": {
       "file": "working.png",
       "frames": 9,
-      "fps": 8,
+      "fps": 10,
       "loop": true
     },
-    "shrug": {
-      "file": "shrug.png",
+    "puzzled": {
+      "file": "puzzled.png",
       "frames": 9,
       "fps": 8,
       "loop": false
     },
-    "stale": {
-      "file": "stale.png",
+    "sleepy": {
+      "file": "sleepy.png",
       "frames": 9,
       "fps": 6,
       "loop": false
     },
-    "needs_you": {
-      "file": "needs_you.png",
-      "frames": 9,
-      "fps": 10,
+    "bored": {
+      "file": "bored.png",
+      "frames": 16,
+      "fps": 6,
+      "loop": true
+    },
+    "sleeping": {
+      "file": "sleeping.png",
+      "frames": 16,
+      "fps": 5,
       "loop": true
     }
   }

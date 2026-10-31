@@ -43,9 +43,13 @@
   .row.stale, .row.ended { opacity: .55; }
   .avatar { width: 96px; height: 96px; border-radius: 18px; background: var(--hue); display: flex; align-items: center; justify-content: center; font-size: 48px; font-weight: 700; color: #0d0f12; margin-left: 8px; box-shadow: 0 0 0 4px var(--accent, var(--grey)); image-rendering: pixelated; }
   .row.needs_permission .avatar:not(.sprite), .row.asking .avatar:not(.sprite) { animation: bob 1s ease-in-out infinite; }
-  .avatar.sprite { background: #0f1216; overflow: hidden; }
-  .avatar.sprite .img { width: 100%; height: 100%; background-image: var(--sheet); background-repeat: no-repeat; background-size: calc(var(--frames) * 100%) 100%; image-rendering: pixelated; animation: sprite var(--dur) steps(var(--frames), jump-none) var(--iter) both; filter: hue-rotate(var(--tint)); }
+  .avatar.sprite { background: #0f1216; position: relative; }
+  .avatar.sprite .img { border-radius: inherit; width: 100%; height: 100%; background-image: var(--sheet); background-repeat: no-repeat; background-size: calc(var(--frames) * 100%) 100%; image-rendering: pixelated; animation: sprite var(--dur) steps(var(--frames), jump-none) var(--iter) both; filter: hue-rotate(var(--tint)); }
   .avatar.sprite.still .img { background-size: 100% 100%; animation: none; }
+  .bubble { position: absolute; top: -14px; right: -14px; width: 40px; height: 36px; border-radius: 50%; background: #f4f1ea; color: #14171c; font-size: 26px; font-weight: 800; line-height: 36px; text-align: center; box-shadow: 0 0 0 3px #14171c; animation: bob 1.2s ease-in-out infinite; }
+  .bubble::before, .bubble::after { content: ""; position: absolute; border-radius: 50%; background: #f4f1ea; box-shadow: 0 0 0 3px #14171c; }
+  .bubble::before { width: 10px; height: 10px; left: -1px; bottom: -6px; }
+  .bubble::after { width: 6px; height: 6px; left: -9px; bottom: -13px; }
   .main { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
   .line1 { display: flex; align-items: baseline; gap: 16px; min-width: 0; white-space: nowrap; }
   .project { font-size: 36px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; max-width: 60%; }
@@ -140,24 +144,27 @@
 
   function spriteState(s) {
     if (s.state === 'ended') return null;
-    if (s.needsYou) return 'needs_you';
-    if (s.state === 'working' || s.state === 'stale') return s.state;
-    if ((s.detail === 'You said no' || s.detail === 'Interrupted') && Date.now() - Date.parse(s.since) < SHRUG_MS) return 'shrug';
-    return 'waiting';
+    if (s.needsYou) return 'puzzled';
+    if (s.state === 'working') return 'working';
+    if (s.state === 'stale') return 'bored';
+    if ((s.detail === 'You said no' || s.detail === 'Interrupted') && Date.now() - Date.parse(s.since) < SHRUG_MS) return 'puzzled';
+    return 'sleeping';
   }
+
+  const bubbleFor = (s) => (s.state === 'asking' ? '?' : s.state === 'needs_permission' ? '!' : '');
 
   function avatarKey(s) {
     const c = s.character;
     const anim = spriteState(s);
-    return `${s.id}|${c.id}|${c.tint}|${anim && c.states[anim] ? anim : 'still'}`;
+    return `${s.id}|${c.id}|${c.tint}|${anim && c.states[anim] ? anim : 'still'}|${bubbleFor(s)}`;
   }
 
   function makeAvatar(s, key) {
     const c = s.character;
-    const anim = key.split('|')[3];
+    const [, , , anim, bubble] = key.split('|');
     const el = document.createElement('div');
     el.className = 'avatar sprite';
-    el.innerHTML = '<div class="img"></div>';
+    el.innerHTML = `<div class="img"></div>${bubble ? `<div class="bubble">${esc(bubble)}</div>` : ''}`;
     el.style.setProperty('--tint', `${c.tint}deg`);
     if (anim === 'still') {
       el.classList.add('still');
