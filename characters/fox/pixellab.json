@@ -1,27 +1,27 @@
 {
   "expressions": {
-    "working": {
-      "frames": 9,
-      "at": "2026-10-31T00:17:18.248Z"
-    },
     "puzzled": {
       "frames": 9,
-      "at": "2026-10-31T00:15:51.196Z"
+      "at": "2026-10-31T00:48:28.258Z"
     },
     "sleepy": {
       "frames": 9,
-      "at": "2026-10-31T00:16:41.145Z"
+      "at": "2026-10-31T00:48:44.622Z"
+    },
+    "working": {
+      "frames": 9,
+      "at": "2026-10-31T00:49:05.150Z"
     },
     "bored": {
       "frames": 9,
-      "at": "2026-10-31T00:35:59.325Z"
+      "at": "2026-10-31T00:50:44.594Z"
     },
     "sleeping": {
       "frames": 9,
-      "at": "2026-10-31T00:33:15.947Z"
+      "at": "2026-10-31T00:52:59.752Z"
     }
   },
   "animal": "red fox",
   "size": 64,
-  "style": "anime cel-shaded"
+  "style": "chibi anime"
 }

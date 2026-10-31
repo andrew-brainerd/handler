@@ -8,12 +8,6 @@
   },
   "still": "still.png",
   "states": {
-    "working": {
-      "file": "working.png",
-      "frames": 9,
-      "fps": 10,
-      "loop": true
-    },
     "puzzled": {
       "file": "puzzled.png",
       "frames": 9,
@@ -25,6 +19,12 @@
       "frames": 9,
       "fps": 6,
       "loop": false
+    },
+    "working": {
+      "file": "working.png",
+      "frames": 9,
+      "fps": 10,
+      "loop": true
     },
     "bored": {
       "file": "bored.png",

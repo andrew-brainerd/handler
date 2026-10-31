@@ -6,7 +6,7 @@ import sharp from 'sharp';
 const API = 'https://api.pixellab.ai/v2';
 const ROOT = join(import.meta.dirname, '..', 'characters');
 
-const STYLE = 'anime cel-shaded style, flat colors with two-tone hard-edged shadows, clean bold lines, vibrant saturated palette';
+const STYLE = 'chibi anime style, cel-shaded with flat colors and two-tone hard-edged shadows, clean bold lines, vibrant saturated palette';
 
 const EXPRESSIONS = {
   working: { action: 'excited to get attention: ears perk up, eyebrows raise, eyes go wide, mouth opens as if calling out', frames: 8, fps: 10, loop: true },
@@ -24,6 +24,7 @@ const { values: args, positionals } = parseArgs({
     only: { type: 'string' },
     redo: { type: 'boolean', default: false },
     seed: { type: 'string' },
+    enhance: { type: 'boolean', default: false },
     outline: { type: 'string', default: 'single color black outline' },
     detail: { type: 'string', default: 'medium detail' },
   },
@@ -79,7 +80,7 @@ async function create(id) {
   mkdirSync(rawDir(id), { recursive: true });
   const size = Number(args.size);
   const res = await api('POST', '/create-image-pixen', {
-    description: `head of a cute ${animal}, ${STYLE}, front view looking straight at the viewer, big expressive anime eyes with bright highlights, friendly, head and a little of the neck only, centered`,
+    description: `chibi ${animal} head, ${STYLE}, oversized round head, huge sparkly anime eyes taking up much of the face with big white highlights, tiny mouth, small muzzle, rosy blush cheeks, soft rounded shapes, kawaii, front view looking straight at the viewer, head only, centered`,
     image_size: { width: size, height: size },
     view: 'side',
     direction: 'south',
@@ -87,6 +88,7 @@ async function create(id) {
     detail: args.detail,
     no_background: true,
     ...(args.seed ? { seed: Number(args.seed) } : {}),
+    ...(args.enhance ? { enhance_prompt: true } : {}),
   });
   writeFileSync(join(rawDir(id), 'base.png'), imageBytes(res.image));
   Object.assign(meta, { animal, size, expressions: args.redo ? {} : meta.expressions });
