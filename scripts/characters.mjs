@@ -36,12 +36,17 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function api(method, path, body) {
   if (!key) throw new Error('PIXEL_LAB_API_KEY is not set (run under infisical run)');
-  const res = await fetch(API + path, {
-    method,
-    headers: { Authorization: `Bearer ${key}`, ...(body ? { 'Content-Type': 'application/json' } : {}) },
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  const text = await res.text();
+  let res, text;
+  for (let attempt = 0; ; attempt++) {
+    res = await fetch(API + path, {
+      method,
+      headers: { Authorization: `Bearer ${key}`, ...(body ? { 'Content-Type': 'application/json' } : {}) },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    text = await res.text();
+    if (res.status !== 429 || attempt >= 40) break;
+    await sleep(15000);
+  }
   if (!res.ok) throw new Error(`${method} ${path} → ${res.status}: ${text.slice(0, 500)}`);
   return text ? JSON.parse(text) : null;
 }

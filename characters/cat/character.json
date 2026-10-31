@@ -1,0 +1,42 @@
+{
+  "id": "cat",
+  "name": "orange tabby cat",
+  "kind": "head",
+  "frame": {
+    "w": 63,
+    "h": 63
+  },
+  "still": "still.png",
+  "states": {
+    "sleepy": {
+      "file": "sleepy.png",
+      "frames": 9,
+      "fps": 6,
+      "loop": false
+    },
+    "bored": {
+      "file": "bored.png",
+      "frames": 16,
+      "fps": 6,
+      "loop": true
+    },
+    "puzzled": {
+      "file": "puzzled.png",
+      "frames": 9,
+      "fps": 8,
+      "loop": false
+    },
+    "working": {
+      "file": "working.png",
+      "frames": 9,
+      "fps": 10,
+      "loop": true
+    },
+    "sleeping": {
+      "file": "sleeping.png",
+      "frames": 16,
+      "fps": 5,
+      "loop": true
+    }
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "expressions": {
+    "working": {
+      "frames": 9,
+      "at": "2026-10-31T18:24:51.610Z"
+    },
+    "sleepy": {
+      "frames": 9,
+      "at": "2026-10-31T18:25:03.395Z"
+    },
+    "puzzled": {
+      "frames": 9,
+      "at": "2026-10-31T18:25:19.414Z"
+    },
+    "bored": {
+      "frames": 9,
+      "at": "2026-10-31T18:25:58.739Z"
+    },
+    "sleeping": {
+      "frames": 9,
+      "at": "2026-10-31T18:28:16.378Z"
+    }
+  },
+  "animal": "giant panda",
+  "size": 64
+}

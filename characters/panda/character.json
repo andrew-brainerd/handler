@@ -1,0 +1,42 @@
+{
+  "id": "panda",
+  "name": "giant panda",
+  "kind": "head",
+  "frame": {
+    "w": 62,
+    "h": 62
+  },
+  "still": "still.png",
+  "states": {
+    "working": {
+      "file": "working.png",
+      "frames": 9,
+      "fps": 10,
+      "loop": true
+    },
+    "sleepy": {
+      "file": "sleepy.png",
+      "frames": 9,
+      "fps": 6,
+      "loop": false
+    },
+    "puzzled": {
+      "file": "puzzled.png",
+      "frames": 9,
+      "fps": 8,
+      "loop": false
+    },
+    "bored": {
+      "file": "bored.png",
+      "frames": 16,
+      "fps": 6,
+      "loop": true
+    },
+    "sleeping": {
+      "file": "sleeping.png",
+      "frames": 16,
+      "fps": 5,
+      "loop": true
+    }
+  }
+}

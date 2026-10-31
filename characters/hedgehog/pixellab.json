@@ -1,0 +1,26 @@
+{
+  "expressions": {
+    "puzzled": {
+      "frames": 9,
+      "at": "2026-10-31T18:37:13.069Z"
+    },
+    "working": {
+      "frames": 9,
+      "at": "2026-10-31T18:37:22.250Z"
+    },
+    "sleepy": {
+      "frames": 9,
+      "at": "2026-10-31T18:37:25.963Z"
+    },
+    "bored": {
+      "frames": 9,
+      "at": "2026-10-31T18:38:01.258Z"
+    },
+    "sleeping": {
+      "frames": 9,
+      "at": "2026-10-31T18:40:02.531Z"
+    }
+  },
+  "animal": "hedgehog",
+  "size": 64
+}

@@ -1,0 +1,42 @@
+{
+  "id": "penguin",
+  "name": "penguin",
+  "kind": "head",
+  "frame": {
+    "w": 60,
+    "h": 60
+  },
+  "still": "still.png",
+  "states": {
+    "bored": {
+      "file": "bored.png",
+      "frames": 16,
+      "fps": 6,
+      "loop": true
+    },
+    "working": {
+      "file": "working.png",
+      "frames": 9,
+      "fps": 10,
+      "loop": true
+    },
+    "sleepy": {
+      "file": "sleepy.png",
+      "frames": 9,
+      "fps": 6,
+      "loop": false
+    },
+    "puzzled": {
+      "file": "puzzled.png",
+      "frames": 9,
+      "fps": 8,
+      "loop": false
+    },
+    "sleeping": {
+      "file": "sleeping.png",
+      "frames": 16,
+      "fps": 5,
+      "loop": true
+    }
+  }
+}
