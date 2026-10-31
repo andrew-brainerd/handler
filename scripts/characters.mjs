@@ -6,6 +6,8 @@ import sharp from 'sharp';
 const API = 'https://api.pixellab.ai/v2';
 const ROOT = join(import.meta.dirname, '..', 'characters');
 
+const STYLE = 'anime cel-shaded style, flat colors with two-tone hard-edged shadows, clean bold lines, vibrant saturated palette';
+
 const EXPRESSIONS = {
   working: { action: 'focused and busy: eyes glance down and side to side as if reading, a small thoughtful nod', frames: 8, fps: 8, loop: true },
   needs_you: { action: 'excited to get attention: ears perk up, eyebrows raise, eyes go wide, mouth opens as if calling out', frames: 8, fps: 10, loop: true },
@@ -22,6 +24,8 @@ const { values: args, positionals } = parseArgs({
     only: { type: 'string' },
     redo: { type: 'boolean', default: false },
     seed: { type: 'string' },
+    outline: { type: 'string', default: 'single color black outline' },
+    detail: { type: 'string', default: 'medium detail' },
   },
 });
 
@@ -75,12 +79,12 @@ async function create(id) {
   mkdirSync(rawDir(id), { recursive: true });
   const size = Number(args.size);
   const res = await api('POST', '/create-image-pixen', {
-    description: `head of a cute ${animal}, front view looking straight at the viewer, expressive big eyes, friendly, head and a little of the neck only, centered`,
+    description: `head of a cute ${animal}, ${STYLE}, front view looking straight at the viewer, big expressive anime eyes with bright highlights, friendly, head and a little of the neck only, centered`,
     image_size: { width: size, height: size },
     view: 'side',
     direction: 'south',
-    outline: 'single color black outline',
-    detail: 'medium detail',
+    outline: args.outline,
+    detail: args.detail,
     no_background: true,
     ...(args.seed ? { seed: Number(args.seed) } : {}),
   });

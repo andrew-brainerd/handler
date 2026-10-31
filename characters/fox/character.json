@@ -8,10 +8,16 @@
   },
   "still": "still.png",
   "states": {
-    "needs_you": {
-      "file": "needs_you.png",
+    "waiting": {
+      "file": "waiting.png",
+      "frames": 8,
+      "fps": 5,
+      "loop": true
+    },
+    "working": {
+      "file": "working.png",
       "frames": 9,
-      "fps": 10,
+      "fps": 8,
       "loop": true
     },
     "shrug": {
@@ -20,22 +26,16 @@
       "fps": 8,
       "loop": false
     },
-    "waiting": {
-      "file": "waiting.png",
-      "frames": 8,
-      "fps": 5,
-      "loop": true
-    },
     "stale": {
       "file": "stale.png",
       "frames": 9,
       "fps": 6,
       "loop": false
     },
-    "working": {
-      "file": "working.png",
+    "needs_you": {
+      "file": "needs_you.png",
       "frames": 9,
-      "fps": 8,
+      "fps": 10,
       "loop": true
     }
   }

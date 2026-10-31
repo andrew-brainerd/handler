@@ -1,26 +1,27 @@
 {
   "expressions": {
-    "needs_you": {
-      "frames": 9,
-      "at": "2026-10-30T22:55:59.467Z"
-    },
-    "shrug": {
-      "frames": 9,
-      "at": "2026-10-30T22:56:06.769Z"
-    },
     "waiting": {
       "frames": 5,
-      "at": "2026-10-30T22:56:07.341Z"
-    },
-    "stale": {
-      "frames": 9,
-      "at": "2026-10-30T22:56:10.726Z"
+      "at": "2026-10-31T00:14:56.476Z"
     },
     "working": {
       "frames": 9,
-      "at": "2026-10-30T22:56:16.065Z"
+      "at": "2026-10-31T00:15:30.596Z"
+    },
+    "shrug": {
+      "frames": 9,
+      "at": "2026-10-31T00:15:51.196Z"
+    },
+    "stale": {
+      "frames": 9,
+      "at": "2026-10-31T00:16:41.145Z"
+    },
+    "needs_you": {
+      "frames": 9,
+      "at": "2026-10-31T00:17:18.248Z"
     }
   },
   "animal": "red fox",
-  "size": 64
+  "size": 64,
+  "style": "anime cel-shaded"
 }
