@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<component name="Board" extends="Scene">
+  <interface>
+    <field id="relayUrl" type="string" onChange="onRelayUrl" />
+    <field id="screensaver" type="boolean" />
+    <field id="poke" type="integer" onChange="onPoke" />
+  </interface>
+
+  <script type="text/brightscript" uri="Util.brs" />
+  <script type="text/brightscript" uri="Board.brs" />
+
+  <children>
+    <Rectangle width="1920" height="1080" color="0x0D0F12FF" />
+    <Group id="stage">
+      <Poster id="lamp" uri="pkg:/images/lamp-grey.png" width="48" height="48" translation="[60, 48]" />
+      <Label id="title" text="Tally" translation="[118, 52]" color="0xE8E6E1FF" />
+      <Label id="counts" translation="[262, 66]" color="0x8B8F97FF" />
+      <Label id="clock" width="500" horizAlign="right" translation="[1348, 56]" color="0x8B8F97FF" />
+      <Group id="rows" translation="[72, 152]" />
+      <Label id="more" width="1776" horizAlign="center" color="0x8B8F97FF" visible="false" />
+      <Label id="empty" text="No agents running" width="1920" height="1080" horizAlign="center" vertAlign="center" color="0x8B8F97FF" visible="false" />
+      <Label id="offline" width="1776" horizAlign="right" translation="[72, 1020]" color="0xF2B33DFF" visible="false" />
+    </Group>
+
+    <Group id="banner" translation="[0, -140]" visible="false">
+      <Poster id="pill" uri="pkg:/images/banner.9.png" height="88" />
+      <Poster id="dot" uri="pkg:/images/dot-amber.png" width="40" height="40" translation="[24, 24]" />
+      <Label id="bannerText" height="88" vertAlign="center" translation="[78, 0]" color="0xE8E6E1FF" />
+    </Group>
+    <Animation id="bannerAnim" duration="0.4" easeFunction="outQuad">
+      <Vector2DFieldInterpolator id="bannerMove" key="[0.0, 1.0]" fieldToInterp="banner.translation" />
+    </Animation>
+
+    <Group id="detail" visible="false">
+      <Rectangle width="1920" height="1080" color="0x0D0F12FF" />
+      <Label id="detailHint" text="Back to close" width="400" horizAlign="right" translation="[1424, 64]" color="0x8B8F97FF" />
+      <LayoutGroup id="detailBody" layoutDirection="vert" itemSpacings="[12]" translation="[96, 72]" />
+    </Group>
+
+    <Audio id="chime" />
+    <Timer id="tick" duration="1" repeat="true" />
+    <Timer id="bannerTimer" duration="10" />
+    <Timer id="focusTimer" duration="20" />
+  </children>
+</component>

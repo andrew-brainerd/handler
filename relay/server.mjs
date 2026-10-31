@@ -12,8 +12,11 @@ const { values: args } = parseArgs({
     port: { type: 'string', default: '8790' },
     verbose: { type: 'boolean', short: 'v', default: false },
     'no-summaries': { type: 'boolean', default: false },
+    roku: { type: 'string', default: process.env.TALLY_ROKU ?? '' },
   },
 });
+
+const rokus = args.roku.split(',').map((ip) => ip.trim()).filter(Boolean);
 
 const MAX_BODY = 1024 * 1024;
 const SWEEP_MS = 2000;
@@ -69,9 +72,25 @@ function broadcast() {
     broadcastTimer = null;
     if (board.seq === lastSeq) return;
     lastSeq = board.seq;
-    const data = `data: ${JSON.stringify(status())}\n\n`;
+    const snap = status();
+    pushToRokus(snap);
+    const data = `data: ${JSON.stringify(snap)}\n\n`;
     for (const res of clients) res.write(data);
   }, BROADCAST_DELAY_MS);
+}
+
+let needsYouKeys = new Set();
+
+function pushToRokus(snap) {
+  const keys = new Set(snap.sessions.filter((s) => s.needsYou).map((s) => `${s.id}|${s.since}`));
+  const fresh = [...keys].some((k) => !needsYouKeys.has(k));
+  needsYouKeys = keys;
+  if (!fresh) return;
+  for (const ip of rokus) {
+    fetch(`http://${ip}:8060/input?tally=alert&seq=${snap.seq}`, { method: 'POST', signal: AbortSignal.timeout(2000) })
+      .then((res) => args.verbose && log(`roku ${ip} alert → ${res.status}`))
+      .catch((err) => args.verbose && log(`roku ${ip} alert failed: ${err.message}`));
+  }
 }
 
 let summarising = false;
@@ -112,8 +131,24 @@ function readBody(req) {
 
 const page = () => readFileSync(join(import.meta.dirname, 'public', 'index.html'));
 
+function demoStatus() {
+  const demo = JSON.parse(readFileSync(join(import.meta.dirname, 'public', 'demo.json'), 'utf8'));
+  const ids = cast.characters.map((c) => c.id);
+  const at = (offset) => new Date(Date.now() + Number(offset) * 1000).toISOString();
+  demo.sessions.forEach((s, i) => {
+    if (ids.length) s.character = cast.describe({ character: ids[i % ids.length], tint: Math.floor(i / ids.length) * 55 });
+    for (const key of ['since', 'lastEvent', 'started']) s[key] = at(s[key]);
+  });
+  return { ...demo, now: new Date().toISOString() };
+}
+
 const server = createServer(async (req, res) => {
   const url = new URL(req.url, 'http://relay');
+  if (url.pathname === '/demo/status') {
+    res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+    return res.end(JSON.stringify(demoStatus()));
+  }
+  if (url.pathname.startsWith('/demo/characters/')) url.pathname = url.pathname.slice(5);
   try {
     if (req.method === 'POST' && url.pathname === '/events') {
       if (!isLocal(req.socket.remoteAddress)) return res.writeHead(403).end();

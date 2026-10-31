@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<component name="SessionRow" extends="Group">
+  <interface>
+    <field id="relayUrl" type="string" />
+    <field id="compact" type="boolean" />
+    <field id="elapsed" type="integer" />
+    <field id="session" type="assocarray" onChange="onSession" />
+    <field id="ago" type="string" onChange="onAgo" />
+  </interface>
+
+  <script type="text/brightscript" uri="Util.brs" />
+  <script type="text/brightscript" uri="SessionRow.brs" />
+</component>

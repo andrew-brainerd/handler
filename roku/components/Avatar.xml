@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<component name="Avatar" extends="Group">
+  <interface>
+    <field id="spec" type="assocarray" onChange="onSpec" />
+  </interface>
+
+  <script type="text/brightscript" uri="Avatar.brs" />
+
+  <children>
+    <Poster id="frame" />
+    <Group id="clip" translation="[4, 4]">
+      <Poster id="sheet" loadDisplayMode="scaleToFill" />
+    </Group>
+    <Poster id="bubble" width="64" height="60" visible="false" />
+    <Timer id="timer" repeat="true" />
+  </children>
+</component>

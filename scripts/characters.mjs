@@ -5,6 +5,7 @@ import sharp from 'sharp';
 
 const API = 'https://api.pixellab.ai/v2';
 const ROOT = join(import.meta.dirname, '..', 'characters');
+const TV = { scale: 2, cols: 8 };
 
 const STYLE = 'chibi anime style, cel-shaded with flat colors and two-tone hard-edged shadows, clean bold lines, vibrant saturated palette';
 
@@ -168,8 +169,20 @@ async function exportHead(id) {
   const tight = async (frame) => sharp(await centred(frame)).extract(crop).png().toBuffer();
   log(`${id}: frame sizes ${[...new Set(sizes.map((m) => `${m.width}x${m.height}`))].join(', ')} → ${side}x${side}`);
 
-  const out = { id, name: meta.animal, kind: 'head', frame: { w: side, h: side }, still: 'still.png', states: {} };
-  writeFileSync(join(dirOf(id), 'still.png'), await tight(base));
+  const tvSide = side * TV.scale;
+  const tvGrid = async (cells, file) => {
+    const big = await Promise.all(cells.map((c) => sharp(c).resize(tvSide, tvSide, { kernel: 'nearest' }).png().toBuffer()));
+    const cols = Math.min(TV.cols, big.length);
+    await sharp({ create: { width: tvSide * cols, height: tvSide * Math.ceil(big.length / TV.cols), channels: 4, background: clear } })
+      .composite(big.map((input, i) => ({ input, left: (i % TV.cols) * tvSide, top: Math.floor(i / TV.cols) * tvSide })))
+      .png()
+      .toFile(join(dirOf(id), file));
+  };
+
+  const out = { id, name: meta.animal, kind: 'head', frame: { w: side, h: side }, still: 'still.png', tv: { frame: tvSide, cols: TV.cols, still: 'still-tv.png' }, states: {} };
+  const still = await tight(base);
+  writeFileSync(join(dirOf(id), 'still.png'), still);
+  await tvGrid([still], 'still-tv.png');
   for (const [name, frames] of Object.entries(strips)) {
     const spec = EXPRESSIONS[name];
     const played = spec?.pingpong ? [...frames, ...frames.slice(1, -1).reverse()] : frames;
@@ -178,7 +191,8 @@ async function exportHead(id) {
       .composite(cells.map((input, i) => ({ input, left: i * side, top: 0 })))
       .png()
       .toFile(join(dirOf(id), `${name}.png`));
-    out.states[name] = { file: `${name}.png`, frames: cells.length, fps: spec?.fps ?? 8, loop: spec?.loop ?? true };
+    await tvGrid(cells, `${name}-tv.png`);
+    out.states[name] = { file: `${name}.png`, tv: `${name}-tv.png`, frames: cells.length, fps: spec?.fps ?? 8, loop: spec?.loop ?? true };
   }
   writeFileSync(join(dirOf(id), 'character.json'), JSON.stringify(out, null, 2) + '\n');
   log(`${id}: exported ${Object.keys(out.states).join(', ')}`);

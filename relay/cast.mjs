@@ -58,6 +58,6 @@ export class Cast {
   describe(assignment) {
     const c = assignment && this.characters.find((x) => x.id === assignment.character);
     if (!c) return null;
-    return { id: c.id, tint: assignment.tint, frame: c.frame, still: c.still, states: c.states };
+    return { id: c.id, tint: assignment.tint, frame: c.frame, still: c.still, tv: c.tv, states: c.states };
   }
 }

@@ -10,9 +10,13 @@
     "install-hooks": "node scripts/hooks.mjs install",
     "uninstall-hooks": "node scripts/hooks.mjs uninstall",
     "replay": "node scripts/replay.mjs",
-    "test": "node --test"
+    "test": "node --test",
+    "roku:deploy": "node scripts/deploy.mjs",
+    "roku:screenshot": "node scripts/screenshot.mjs",
+    "roku:art": "node scripts/roku-art.mjs"
   },
   "devDependencies": {
+    "fflate": "^0.8.3",
     "sharp": "^0.35.5"
   }
 }
