@@ -9,6 +9,7 @@ const HIDDEN_EXPIRE_MS = 10 * 60e3;
 const QUIET_WATCH_MS = 30e3;
 const ACTIVITY_KEEP = 20;
 const DONE = 'Done, waiting for you';
+const SUMMARY_EVERY_MS = 60e3;
 
 export const clip = (text, max) => {
   if (typeof text !== 'string') return null;
@@ -162,6 +163,10 @@ export class Board {
       lastMessage: null,
       recentText: '',
       summary: null,
+      summaryWanted: false,
+      summaryNow: false,
+      summaryAt: 0,
+      turn: 0,
       todo: null,
       tasks: { done: 0, total: 0, current: null },
       activity: [],
@@ -225,6 +230,9 @@ export class Board {
       s.firstPrompt ??= clip(e.prompt, 120);
       s.lastPrompt = clip(e.prompt, 120);
       s.recentText = '';
+      s.summary = null;
+      s.summaryAt = 0;
+      s.turn++;
       clearAll(main);
       setBase(main, 'working', now);
     },
@@ -255,6 +263,7 @@ export class Board {
       a.pending.delete(e.tool_use_id);
       for (const id of a.pending.keys()) if (id.startsWith('~')) a.pending.delete(id);
       setBase(a, 'working', now);
+      s.summaryWanted = true;
     },
     PostToolUseFailure: (s, e, now) => this.#handlers.PostToolUse(s, e, now),
     Notification: (s, e, now) => {
@@ -272,6 +281,8 @@ export class Board {
       clearAll(main);
       setBase(main, 'waiting', now, DONE);
       s.lastMessage = keepLines(e.last_assistant_message, 1500);
+      s.summaryWanted = true;
+      s.summaryNow = true;
       this.#syncBackground(s, e.background_tasks, now);
     },
     StopFailure: (s, e, now) => {
@@ -324,6 +335,25 @@ export class Board {
     }
     if (changed) this.seq++;
     return changed;
+  }
+
+  nextSummary(now = Date.now()) {
+    const due = [...this.sessions.values()]
+      .filter((s) => s.visible && !s.ended && s.transcriptPath && s.summaryWanted && (s.summaryNow || now - s.summaryAt >= SUMMARY_EVERY_MS))
+      .sort((a, b) => b.summaryNow - a.summaryNow || a.summaryAt - b.summaryAt);
+    const s = due[0];
+    if (!s) return null;
+    s.summaryWanted = s.summaryNow = false;
+    s.summaryAt = now;
+    return { sessionId: s.id, turn: s.turn, project: s.project, transcriptPath: s.transcriptPath };
+  }
+
+  setSummary({ sessionId, turn }, text) {
+    const s = this.sessions.get(sessionId);
+    if (!s || s.turn !== turn || !text || s.summary === text) return false;
+    s.summary = clip(text, 90);
+    this.seq++;
+    return true;
   }
 
   watchTargets(now = Date.now()) {

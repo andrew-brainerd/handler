@@ -5,11 +5,13 @@ import { parseArgs } from 'node:util';
 import { Board } from './state.mjs';
 import { Cast } from './cast.mjs';
 import { checkTranscript, hasOutcome } from './transcript.mjs';
+import { summarise } from './summarise.mjs';
 
 const { values: args } = parseArgs({
   options: {
     port: { type: 'string', default: '8790' },
     verbose: { type: 'boolean', short: 'v', default: false },
+    'no-summaries': { type: 'boolean', default: false },
   },
 });
 
@@ -72,6 +74,26 @@ function broadcast() {
   }, BROADCAST_DELAY_MS);
 }
 
+let summarising = false;
+
+async function pumpSummaries() {
+  if (summarising || args[no-summaries]) return;
+  const job = board.nextSummary();
+  if (!job) return;
+  summarising = true;
+  const started = Date.now();
+  try {
+    const line = await summarise(job);
+    if (board.setSummary(job, line)) broadcast();
+    if (args.verbose) log(`${job.project} ${job.sessionId.slice(0, 8)} summary in ${Date.now() - started}ms: ${line}`);
+  } catch (err) {
+    if (args.verbose) log(`${job.project} ${job.sessionId.slice(0, 8)} summary failed: ${err.message}`);
+  } finally {
+    summarising = false;
+    pumpSummaries();
+  }
+}
+
 function readBody(req) {
   return new Promise((resolve, reject) => {
     let size = 0;
@@ -100,6 +122,7 @@ const server = createServer(async (req, res) => {
       if (board.apply(event)) {
         board.sweep();
         broadcast();
+        pumpSummaries();
         if (args.verbose) {
           const after = board.snapshot().sessions.find((s) => s.id === event.session_id);
           if (after && after.state !== before) log(`${after.project} ${event.session_id.slice(0, 8)} ${before ?? '-'} → ${after.state}${after.detail ? ` (${after.detail})` : ''}`);
@@ -161,6 +184,7 @@ setInterval(async () => {
     }
   }
   if (changed) broadcast();
+  pumpSummaries();
 }, SWEEP_MS);
 
 setInterval(() => {
