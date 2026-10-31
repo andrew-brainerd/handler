@@ -77,7 +77,7 @@ function broadcast() {
 let summarising = false;
 
 async function pumpSummaries() {
-  if (summarising || args[no-summaries]) return;
+  if (summarising || args['no-summaries']) return;
   const job = board.nextSummary();
   if (!job) return;
   summarising = true;
