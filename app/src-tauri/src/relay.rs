@@ -163,6 +163,8 @@ impl Relay {
             .args(inner.settings.relay_args())
             .arg("--data")
             .arg(&self.paths.data)
+            .arg("--parent")
+            .arg(std::process::id().to_string())
             .current_dir(&self.paths.root)
             .stdin(Stdio::null())
             .stdout(log.try_clone().map_err(|e| e.to_string())?)

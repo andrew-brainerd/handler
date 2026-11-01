@@ -17,6 +17,7 @@ const { values: args } = parseArgs({
     roku: { type: 'string', default: process.env.TALLY_ROKU ?? '' },
     forward: { type: 'string', default: process.env.TALLY_FORWARD ?? '' },
     data: { type: 'string', default: process.env.TALLY_DATA ?? '' },
+    parent: { type: 'string', default: '' },
   },
 });
 
@@ -262,5 +263,18 @@ if (forwarder) {
 setInterval(() => {
   for (const res of clients) res.write(': ping\n\n');
 }, 20000);
+
+if (args.parent) {
+  setInterval(() => {
+    try {
+      process.kill(Number(args.parent), 0);
+    } catch (err) {
+      if (err.code !== 'EPERM') {
+        log(`parent ${args.parent} is gone; stopping`);
+        process.exit(0);
+      }
+    }
+  }, 3000);
+}
 
 server.listen(Number(args.port), '0.0.0.0', () => log(`Tally relay on http://localhost:${args.port}/`));

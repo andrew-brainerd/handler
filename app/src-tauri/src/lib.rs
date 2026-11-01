@@ -139,7 +139,26 @@ fn root(app: &AppHandle) -> PathBuf {
     if tauri::is_dev() {
         PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..").join("..")
     } else {
-        app.path().resource_dir().unwrap_or_default()
+        plain_path(app.path().resource_dir().unwrap_or_default())
+    }
+}
+
+fn plain_path(path: PathBuf) -> PathBuf {
+    match path.to_str().and_then(|s| s.strip_prefix(r"\\?\")) {
+        Some(rest) if !rest.starts_with("UNC\\") => PathBuf::from(rest),
+        _ => path,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn verbatim_prefix_is_dropped() {
+        assert_eq!(plain_path(PathBuf::from(r"\\?\C:\Users\a\Tally")), PathBuf::from(r"C:\Users\a\Tally"));
+        assert_eq!(plain_path(PathBuf::from(r"\\?\UNC\srv\share")), PathBuf::from(r"\\?\UNC\srv\share"));
+        assert_eq!(plain_path(PathBuf::from("/Applications/Tally.app")), PathBuf::from("/Applications/Tally.app"));
     }
 }
 
@@ -157,7 +176,7 @@ pub fn run() {
             let saved = settings::load(handle);
             let paths = Paths {
                 root: root(handle),
-                data: app.path().app_data_dir()?,
+                data: plain_path(app.path().app_data_dir()?),
                 log: app.path().app_log_dir()?.join("relay.log"),
             };
             app.manage(Relay::start(saved.clone(), paths));
