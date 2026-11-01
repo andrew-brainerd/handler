@@ -8,6 +8,7 @@ import { Cast } from './cast.mjs';
 import { checkTranscript, hasOutcome } from './transcript.mjs';
 import { summarise } from './summarise.mjs';
 import { Forwarder, HEARTBEAT_MS, Peers, sortSessions } from './peers.mjs';
+import { isQuiet, parseQuiet } from './quiet.mjs';
 
 const { values: args } = parseArgs({
   options: {
@@ -18,8 +19,11 @@ const { values: args } = parseArgs({
     forward: { type: 'string', default: process.env.TALLY_FORWARD ?? '' },
     data: { type: 'string', default: process.env.TALLY_DATA ?? '' },
     parent: { type: 'string', default: '' },
+    quiet: { type: 'string', default: process.env.TALLY_QUIET ?? '' },
   },
 });
+
+const quietHours = parseQuiet(args.quiet);
 
 const rokus = args.roku.split(',').map((ip) => ip.trim()).filter(Boolean);
 
@@ -62,6 +66,7 @@ const forwarder = args.forward
 function status() {
   const snap = board.snapshot();
   snap.sessions = sortSessions([...snap.sessions, ...peers.sessions()]);
+  snap.quiet = isQuiet(quietHours);
   const active = snap.sessions.map((s) => s.id);
   for (const s of snap.sessions) s.character = cast.describe(cast.assign(s.id, active));
   return snap;

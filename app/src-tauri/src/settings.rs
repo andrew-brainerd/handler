@@ -11,6 +11,7 @@ pub struct Settings {
     pub port: u16,
     pub summaries: bool,
     pub roku_ips: String,
+    pub quiet_hours: String,
     pub notifications: bool,
     pub start_on_login: bool,
     pub node_path: String,
@@ -31,6 +32,7 @@ impl Default for Settings {
             port: 8790,
             summaries: true,
             roku_ips: String::new(),
+            quiet_hours: String::new(),
             notifications: true,
             start_on_login: true,
             node_path: String::new(),
@@ -49,6 +51,10 @@ impl Settings {
             args.push("--roku".to_owned());
             args.push(rokus);
         }
+        if !self.quiet_hours.trim().is_empty() {
+            args.push("--quiet".to_owned());
+            args.push(self.quiet_hours.trim().to_owned());
+        }
         if self.role == Role::Forward && !self.forward_url.trim().is_empty() {
             args.push("--forward".to_owned());
             args.push(self.forward_url.trim().to_owned());
@@ -64,6 +70,9 @@ impl Settings {
         if self.port < 1024 {
             return Err("Pick a port from 1024 up".into());
         }
+        if !self.quiet_hours.trim().is_empty() && !valid_quiet(self.quiet_hours.trim()) {
+            return Err("Quiet hours should look like 22:00-07:00".into());
+        }
         if self.role == Role::Forward {
             let url = self.forward_url.trim();
             if !(url.starts_with("http://") || url.starts_with("https://")) {
@@ -71,6 +80,18 @@ impl Settings {
             }
         }
         Ok(())
+    }
+}
+
+fn valid_quiet(text: &str) -> bool {
+    let time = |t: &str| {
+        let (h, m) = t.trim().split_once(':')?;
+        let (h, m) = (h.parse::<u32>().ok()?, m.parse::<u32>().ok()?);
+        (h < 24 && m < 60).then_some(h * 60 + m)
+    };
+    match text.split_once('-') {
+        Some((from, to)) => matches!((time(from), time(to)), (Some(a), Some(b)) if a != b),
+        None => false,
     }
 }
 
@@ -119,6 +140,17 @@ mod tests {
             s.relay_args(),
             ["--verbose", "--port", "8790", "--no-summaries", "--roku", "192.168.4.46,192.168.4.47", "--forward", "http://pc:8790"]
         );
+    }
+
+    #[test]
+    fn quiet_hours_are_checked() {
+        assert!(valid_quiet("22:00-07:00"));
+        assert!(valid_quiet("12:30 - 13:00"));
+        assert!(!valid_quiet("22-7"));
+        assert!(!valid_quiet("25:00-07:00"));
+        assert!(!valid_quiet("08:00-08:00"));
+        let s = Settings { quiet_hours: "22:00-07:00".into(), ..Settings::default() };
+        assert!(s.relay_args().ends_with(&["--quiet".to_owned(), "22:00-07:00".to_owned()]));
     }
 
     #[test]

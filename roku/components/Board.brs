@@ -18,6 +18,10 @@ sub init()
     m.tick = m.top.findNode("tick")
     m.bannerTimer = m.top.findNode("bannerTimer")
     m.focusTimer = m.top.findNode("focusTimer")
+    m.stage = m.top.findNode("stage")
+    m.muteNote = m.top.findNode("muteNote")
+    m.shiftTimer = m.top.findNode("shiftTimer")
+    m.noteTimer = m.top.findNode("noteTimer")
 
     m.top.findNode("title").font = MakeFont(44, true)
     m.counts.font = MakeFont(30)
@@ -25,6 +29,7 @@ sub init()
     m.more.font = MakeFont(30)
     m.empty.font = MakeFont(48)
     m.offline.font = MakeFont(24)
+    m.muteNote.font = MakeFont(26)
     m.bannerText.font = MakeFont(32, true)
     m.top.findNode("detailHint").font = MakeFont(26)
 
@@ -53,6 +58,14 @@ sub init()
     m.tick.observeField("fire", "onTick")
     m.bannerTimer.observeField("fire", "hideBanner")
     m.focusTimer.observeField("fire", "clearFocus")
+    m.shiftTimer.observeField("fire", "shiftStage")
+    m.noteTimer.observeField("fire", "showMuteNote")
+    m.shifts = [[0, 0], [10, 6], [-8, 10], [12, -6], [-10, -8], [4, 12], [-12, 2], [8, -10]]
+    m.shift = 0
+    m.shiftTimer.control = "start"
+    m.registry = CreateObject("roRegistrySection", "tally")
+    m.muted = m.registry.Read("muted") = "1"
+    showMuteNote()
     m.top.setFocus(true)
 end sub
 
@@ -102,6 +115,7 @@ sub onStatus()
     m.fetchedMs = m.span.TotalMilliseconds()
     alertNew()
     render()
+    if not m.noting then showMuteNote()
 end sub
 
 function fitRows(sessions as object, height as integer) as object
@@ -238,8 +252,10 @@ sub showBanner(s as object)
     m.bannerAnim.control = "start"
     m.bannerTimer.control = "stop"
     m.bannerTimer.control = "start"
-    m.chime.control = "stop"
-    m.chime.control = "play"
+    if not m.muted and m.status.quiet <> true
+        m.chime.control = "stop"
+        m.chime.control = "play"
+    end if
     print "TALLY: banner "; m.bannerText.text
 end sub
 
@@ -360,8 +376,45 @@ sub closeDetail()
     m.detail.visible = false
 end sub
 
+sub shiftStage()
+    m.shift = (m.shift + 1) mod m.shifts.Count()
+    m.stage.translation = m.shifts[m.shift]
+end sub
+
+sub toggleMute()
+    m.muted = not m.muted
+    if m.muted then m.registry.Write("muted", "1") else m.registry.Write("muted", "0")
+    m.registry.Flush()
+    m.muteNote.text = "Chime on"
+    if m.muted then m.muteNote.text = "Chime off"
+    m.muteNote.color = m.c.text
+    m.noting = true
+    m.noteTimer.control = "stop"
+    m.noteTimer.control = "start"
+    if not m.muted
+        m.chime.control = "stop"
+        m.chime.control = "play"
+    end if
+    print "TALLY: muted "; m.muted
+end sub
+
+sub showMuteNote()
+    m.noting = false
+    m.muteNote.color = m.c.dim
+    m.muteNote.text = ""
+    if m.muted
+        m.muteNote.text = "Chime off  (* to turn on)"
+    else if m.status <> invalid and m.status.quiet = true
+        m.muteNote.text = "Quiet hours"
+    end if
+end sub
+
 function onKeyEvent(key as string, press as boolean) as boolean
     if not press then return false
+    if key = "options"
+        toggleMute()
+        return true
+    end if
     if m.openId <> ""
         if key = "back" or key = "OK"
             closeDetail()

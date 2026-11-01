@@ -269,7 +269,7 @@
         $('banner').classList.add('show');
         clearTimeout(bannerTimer);
         bannerTimer = setTimeout(() => $('banner').classList.remove('show'), 10000);
-        chime();
+        if (!status?.quiet) chime();
       }
     }
     seenNeedsYou = now;

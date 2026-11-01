@@ -15,6 +15,7 @@
       <Poster id="lamp" uri="pkg:/images/lamp-grey.png" width="48" height="48" translation="[60, 48]" />
       <Label id="title" text="Tally" translation="[118, 52]" color="0xE8E6E1FF" />
       <Label id="counts" translation="[262, 66]" color="0x8B8F97FF" />
+      <Label id="muteNote" width="520" horizAlign="right" translation="[808, 66]" color="0x8B8F97FF" />
       <Label id="clock" width="500" horizAlign="right" translation="[1348, 56]" color="0x8B8F97FF" />
       <Group id="rows" translation="[72, 152]" />
       <Label id="more" width="1776" horizAlign="center" color="0x8B8F97FF" visible="false" />
@@ -41,5 +42,7 @@
     <Timer id="tick" duration="1" repeat="true" />
     <Timer id="bannerTimer" duration="10" />
     <Timer id="focusTimer" duration="20" />
+    <Timer id="shiftTimer" duration="180" repeat="true" />
+    <Timer id="noteTimer" duration="4" />
   </children>
 </component>

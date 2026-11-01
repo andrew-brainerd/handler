@@ -32,6 +32,7 @@ function read() {
     port: Number(data.get('port')),
     summaries: form.elements.summaries.checked,
     rokuIps: data.get('rokuIps').trim(),
+    quietHours: data.get('quietHours').trim(),
     notifications: form.elements.notifications.checked,
     startOnLogin: form.elements.startOnLogin.checked,
     nodePath: data.get('nodePath').trim(),
