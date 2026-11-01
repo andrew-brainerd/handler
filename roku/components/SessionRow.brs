@@ -115,6 +115,10 @@ sub onSession()
     m.project.text = AsText(s.project)
     branch = AsText(s.branch)
     if Len(branch) > 32 then branch = Left(branch, 31) + "…"
+    if AsText(s.where) <> ""
+        if branch <> "" then branch = branch + "  ·  "
+        branch = branch + AsText(s.where)
+    end if
     m.branch.text = branch
     m.branch.visible = branch <> ""
     m.state.text = parts.stateText

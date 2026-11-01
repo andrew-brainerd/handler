@@ -87,3 +87,10 @@ function AsText(value as dynamic) as string
     if t = "roInt" or t = "Integer" or t = "roFloat" or t = "Float" then return value.ToStr()
     return ""
 end function
+
+function ShortHost(host as dynamic) as string
+    h = AsText(host)
+    dot = Instr(1, h, ".")
+    if dot > 1 then h = Left(h, dot - 1)
+    return h
+end function

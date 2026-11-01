@@ -1,4 +1,5 @@
 import { basename } from 'node:path';
+import { sortSessions } from './peers.mjs';
 
 const URGENCY = { asking: 5, needs_permission: 5, working: 3, waiting: 2, stale: 1, ended: 0 };
 const NEEDS_YOU = new Set(['asking', 'needs_permission']);
@@ -441,8 +442,7 @@ export class Board {
         needsYou: NEEDS_YOU.has(top.state),
       });
     }
-    const rank = (x) => (x.needsYou ? 0 : x.state === 'working' ? 1 : x.state === 'waiting' ? 2 : x.state === 'stale' ? 3 : 4);
-    sessions.sort((a, b) => rank(a) - rank(b) || (a.needsYou ? a.since.localeCompare(b.since) : b.lastEvent.localeCompare(a.lastEvent)));
+    sortSessions(sessions);
     return { version: 1, now: new Date(now).toISOString(), seq: this.seq, sessions };
   }
 }

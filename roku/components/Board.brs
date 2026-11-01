@@ -125,6 +125,11 @@ end function
 sub render()
     sessions = m.status.sessions
     shown = fitRows(sessions, 872)
+    hosts = {}
+    for each s in sessions
+        hosts[ShortHost(s.host)] = true
+    end for
+    manyHosts = hosts.Count() > 1
     keep = {}
     m.shownIds = []
     y = 0
@@ -140,6 +145,8 @@ sub render()
         compact = IsCompact(s.state)
         node.elapsed = ageOf(s.since)
         node.compact = compact
+        s.where = ""
+        if manyHosts then s.where = ShortHost(s.host)
         node.session = s
         node.ago = FormatAgo(ageOf(s.since))
         node.translation = [0, y]

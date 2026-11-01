@@ -1,11 +1,13 @@
 import { createServer } from 'node:http';
 import { existsSync, readFileSync } from 'node:fs';
+import { hostname } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { parseArgs } from 'node:util';
 import { Board } from './state.mjs';
 import { Cast } from './cast.mjs';
 import { checkTranscript, hasOutcome } from './transcript.mjs';
 import { summarise } from './summarise.mjs';
+import { Forwarder, HEARTBEAT_MS, Peers, sortSessions } from './peers.mjs';
 
 const { values: args } = parseArgs({
   options: {
@@ -13,6 +15,7 @@ const { values: args } = parseArgs({
     verbose: { type: 'boolean', short: 'v', default: false },
     'no-summaries': { type: 'boolean', default: false },
     roku: { type: 'string', default: process.env.TALLY_ROKU ?? '' },
+    forward: { type: 'string', default: process.env.TALLY_FORWARD ?? '' },
   },
 });
 
@@ -47,8 +50,15 @@ const CHARACTERS = join(import.meta.dirname, '..', 'characters');
 const cast = new Cast(CHARACTERS);
 if (args.verbose) log(`cast: ${cast.characters.map((c) => c.id).join(', ') || 'none'}`);
 
+const peers = new Peers();
+
+const forwarder = args.forward
+  ? new Forwarder({ url: args.forward, host: hostname(), snapshot: () => board.snapshot(), log })
+  : null;
+
 function status() {
   const snap = board.snapshot();
+  snap.sessions = sortSessions([...snap.sessions, ...peers.sessions()]);
   const active = snap.sessions.map((s) => s.id);
   for (const s of snap.sessions) s.character = cast.describe(cast.assign(s.id, active));
   return snap;
@@ -72,6 +82,7 @@ function broadcast() {
     broadcastTimer = null;
     if (board.seq === lastSeq) return;
     lastSeq = board.seq;
+    forwarder?.send();
     const snap = status();
     pushToRokus(snap);
     const data = `data: ${JSON.stringify(snap)}\n\n`;
@@ -165,6 +176,21 @@ const server = createServer(async (req, res) => {
       }
       return res.writeHead(204).end();
     }
+    if (req.method === 'POST' && url.pathname === '/peer') {
+      if (!isLocal(req.socket.remoteAddress)) return res.writeHead(403).end();
+      const body = JSON.parse(await readBody(req));
+      const isNew = !peers.peers.has(body?.host);
+      if (peers.accept(body)) {
+        board.seq++;
+        broadcast();
+      }
+      if (isNew && args.verbose) log(`peer ${body.host} joined`);
+      return res.writeHead(204).end();
+    }
+    if (req.method === 'GET' && url.pathname === '/peers') {
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+      return res.end(JSON.stringify(peers.hosts()));
+    }
     if (req.method === 'GET' && url.pathname === '/status') {
       res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'Access-Control-Allow-Origin': '*' });
       return res.end(JSON.stringify(status()));
@@ -211,6 +237,10 @@ const server = createServer(async (req, res) => {
 
 setInterval(async () => {
   let changed = board.sweep();
+  if (peers.sweep()) {
+    board.seq++;
+    changed = true;
+  }
   for (const target of board.watchTargets()) {
     const outcome = await checkTranscript(target);
     if (hasOutcome(outcome) && board.resolve(target.sessionId, target.agentKey, outcome)) {
@@ -221,6 +251,11 @@ setInterval(async () => {
   if (changed) broadcast();
   pumpSummaries();
 }, SWEEP_MS);
+
+if (forwarder) {
+  setInterval(() => forwarder.send(), HEARTBEAT_MS);
+  forwarder.send();
+}
 
 setInterval(() => {
   for (const res of clients) res.write(': ping\n\n');
