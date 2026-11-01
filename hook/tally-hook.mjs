@@ -22,6 +22,7 @@ process.stdin.on('end', async () => {
     if (event.tool_input) event.tool_input = trim(event.tool_input, event.tool_name === 'AskUserQuestion' ? 1000 : 300);
     if (event.last_assistant_message) event.last_assistant_message = trim(event.last_assistant_message, 4000);
     event.host = hostname();
+    if (process.env.WARP_TERMINAL_SESSION_UUID) event.warp_session = process.env.WARP_TERMINAL_SESSION_UUID;
     event.ts = new Date().toISOString();
     await fetch(url, {
       method: 'POST',

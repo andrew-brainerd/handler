@@ -116,8 +116,9 @@ export class Board {
   seq = 0;
   firstSeen = new Set();
 
-  constructor({ locate = (cwd) => ({ project: fileName(cwd), branch: null }), onNewEventType = () => {} } = {}) {
+  constructor({ locate = (cwd) => ({ project: fileName(cwd), branch: null }), tabName = () => null, onNewEventType = () => {} } = {}) {
     this.locate = locate;
+    this.tabName = tabName;
     this.onNewEventType = onNewEventType;
   }
 
@@ -138,6 +139,7 @@ export class Board {
       Object.assign(s, this.locate(e.cwd));
     }
     if (e.host) s.host = e.host;
+    if (e.warp_session) s.warpSession = e.warp_session;
     if (e.transcript_path) s.transcriptPath = e.transcript_path;
     const handler = this.#handlers[e.hook_event_name];
     if (!handler) return false;
@@ -153,6 +155,7 @@ export class Board {
       project: '?',
       branch: null,
       host: e.host ?? null,
+      warpSession: null,
       model: null,
       transcriptPath: e.transcript_path ?? null,
       started: now,
@@ -422,7 +425,8 @@ export class Board {
       const todo = s.todo ?? (s.tasks.total ? { current: s.tasks.current, done: s.tasks.done, total: s.tasks.total } : null);
       sessions.push({
         id: s.id,
-        project: s.project,
+        project: this.tabName(s.warpSession) ?? s.project,
+        folder: s.project,
         branch: s.branch,
         host: s.host,
         cwd: s.cwd,

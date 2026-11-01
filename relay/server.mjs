@@ -9,6 +9,7 @@ import { checkTranscript, hasOutcome } from './transcript.mjs';
 import { summarise } from './summarise.mjs';
 import { Forwarder, HEARTBEAT_MS, Peers, sortSessions } from './peers.mjs';
 import { isQuiet, parseQuiet } from './quiet.mjs';
+import { WarpTabs, warpDatabase } from './warp.mjs';
 
 const { values: args } = parseArgs({
   options: {
@@ -47,8 +48,14 @@ function locate(cwd) {
 
 const log = (...parts) => console.log(new Date().toISOString().slice(11, 19), ...parts);
 
+const warp = new WarpTabs(warpDatabase(), { log });
+await warp.open();
+warp.refresh();
+if (args.verbose && warp.query) log(`warp tabs: ${warp.path}`);
+
 const board = new Board({
   locate,
+  tabName: (id) => warp.title(id),
   onNewEventType: (name, keys) => args.verbose && log(`first ${name}: ${keys.join(', ')}`),
 });
 
@@ -247,6 +254,10 @@ const server = createServer(async (req, res) => {
 
 setInterval(async () => {
   let changed = board.sweep();
+  if (warp.refresh()) {
+    board.seq++;
+    changed = true;
+  }
   if (peers.sweep()) {
     board.seq++;
     changed = true;
