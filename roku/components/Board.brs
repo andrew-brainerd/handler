@@ -502,12 +502,14 @@ sub buildSlide()
     rule.width = 1776
     rule.height = 2
     rule.translation = [0, 222]
+    m.slideLabel = MakeLabel(m.slide, 24, m.c.dim)
+    m.slideLabel.translation = [0, 246]
     m.slideBody = MakeLabel(m.slide, 30, m.c.text)
     m.slideBody.width = 1776
-    m.slideBody.height = 600
+    m.slideBody.height = 540
     m.slideBody.wrap = true
     m.slideBody.lineSpacing = 6
-    m.slideBody.translation = [0, 252]
+    m.slideBody.translation = [0, 290]
     m.slideFooter = MakeLabel(m.slide, 26, m.c.dim)
     m.slideFooter.width = 1776
     m.slideFooter.horizAlign = "center"
@@ -516,10 +518,14 @@ end sub
 
 sub updateSlides(allWaiting as boolean)
     ids = []
-    if allWaiting and not m.browsing and m.status <> invalid
-        for each s in m.status.sessions
-            if s.state = "waiting" then ids.Push(s.id)
-        end for
+    if not m.browsing and m.status <> invalid
+        if m.status.sessions.Count() = 1
+            ids.Push(m.status.sessions[0].id)
+        else if allWaiting
+            for each s in m.status.sessions
+                if s.state = "waiting" then ids.Push(s.id)
+            end for
+        end if
     end if
     m.slideIds = ids
     on = ids.Count() > 0
@@ -571,33 +577,105 @@ sub stopBrowsing()
     if m.status <> invalid then render()
 end sub
 
+function slideAnim(s as object) as string
+    if s.needsYou = true then return "puzzled"
+    if s.state = "working" then return "working"
+    if s.state = "stale" then return "bored"
+    if s.state = "ended" then return ""
+    return "sleeping"
+end function
+
+sub setSlideAvatar(s as object, variant as string)
+    c = s.character
+    if type(c) <> "roAssociativeArray" or type(c.tv) <> "roAssociativeArray"
+        m.slideAvatar.visible = false
+        return
+    end if
+    base = m.top.relayUrl + "/characters/" + c.id + "/"
+    bubble = ""
+    if s.state = "asking" then bubble = "question"
+    if s.state = "needs_permission" then bubble = "permission"
+    spec = { size: 192, ring: variant, bubble: bubble, cols: c.tv.cols, url: base + c.tv.still, frames: 1, fps: 1, loop: false }
+    anim = slideAnim(s)
+    if anim <> "" and type(c.states) = "roAssociativeArray" and c.states.DoesExist(anim)
+        st = c.states[anim]
+        spec.url = base + st.tv
+        spec.frames = st.frames
+        spec.fps = st.fps
+        spec.loop = st.loop
+    end if
+    m.slideAvatar.spec = spec
+    m.slideAvatar.visible = true
+end sub
+
+function activityText(s as object, count as integer, skip = "" as string) as string
+    lines = []
+    if type(s.activity) = "roArray"
+        for each a in s.activity
+            if lines.Count() < count and a <> skip
+                if Left(a, 2) = "↳ " then a = "› subagent: " + Mid(a, 3)
+                lines.Push("• " + a)
+            end if
+        end for
+    end if
+    return lines.Join(Chr(10))
+end function
+
+function slideContent(s as object) as object
+    if type(s.question) = "roAssociativeArray"
+        text = AsText(s.question.text)
+        if type(s.question.options) = "roArray" and s.question.options.Count() > 0
+            options = []
+            for each o in s.question.options
+                options.Push("• " + AsText(o))
+            end for
+            text = text + Chr(10) + Chr(10) + options.Join(Chr(10))
+        end if
+        return { label: "QUESTION", text: text }
+    end if
+    if s.state = "needs_permission"
+        text = AsText(s.detail).Replace("Needs permission: ", "").Replace("Needs permission", "")
+        recent = activityText(s, 6, text)
+        if recent <> "" then text = text + Chr(10) + Chr(10) + "Before that:" + Chr(10) + recent
+        return { label: "WANTS TO RUN", text: text }
+    end if
+    if s.state = "working"
+        text = ""
+        if type(s.todo) = "roAssociativeArray"
+            text = "Tasks: " + AsText(s.todo.done) + " of " + AsText(s.todo.total) + " done"
+            if AsText(s.todo.current) <> "" then text = text + "  ·  now: " + AsText(s.todo.current)
+            text = text + Chr(10) + Chr(10)
+        end if
+        if type(s.subagentList) = "roArray" and s.subagentList.Count() > 0
+            subs = []
+            for each a in s.subagentList
+                subs.Push("› " + AsText(a.type) + ": " + AsText(a.description) + " (" + StateText(AsText(a.state)) + ")")
+            end for
+            text = text + subs.Join(Chr(10)) + Chr(10) + Chr(10)
+        end if
+        return { label: "RECENT ACTIVITY", text: text + activityText(s, 10) }
+    end if
+    if AsText(s.lastMessage) <> "" then return { label: "LAST MESSAGE", text: plainText(AsText(s.lastMessage)) }
+    return { label: "RECENT ACTIVITY", text: activityText(s, 10) }
+end function
+
 sub showSlide()
     s = findSession(m.slideId)
     if s = invalid then return
-    c = s.character
-    if type(c) = "roAssociativeArray" and type(c.tv) = "roAssociativeArray"
-        base = m.top.relayUrl + "/characters/" + c.id + "/"
-        spec = { size: 192, ring: "waiting", bubble: "", cols: c.tv.cols, url: base + c.tv.still, frames: 1, fps: 1, loop: false }
-        if type(c.states) = "roAssociativeArray" and c.states.DoesExist("sleeping")
-            st = c.states["sleeping"]
-            spec.url = base + st.tv
-            spec.frames = st.frames
-            spec.fps = st.fps
-            spec.loop = st.loop
-        end if
-        m.slideAvatar.spec = spec
-        m.slideAvatar.visible = true
-    else
-        m.slideAvatar.visible = false
-    end if
-    title = AsText(s.project)
-    m.slideTitle.text = title
+    variant = CardVariant(s)
+    setSlideAvatar(s, variant)
+    m.slideTitle.text = AsText(s.project)
+    m.slideMeta.color = AccentColor(variant)
     m.slideSummary.text = AsText(s.summary)
-    body = plainText(AsText(s.lastMessage))
+    content = slideContent(s)
+    m.slideLabel.text = content.label
+    body = content.text
     size = 32
     if Len(body) > 1400 then size = 28
     if Len(body) > 2200 then size = 24
     m.slideBody.font = MakeFont(size)
+    m.slideBody.color = m.c.text
+    if s.needsYou = true then m.slideBody.color = m.c.request
     m.slideBody.text = body
     showSlideAgo()
 end sub
@@ -605,7 +683,16 @@ end sub
 sub showSlideAgo()
     s = findSession(m.slideId)
     if s = invalid then return
-    meta = "Done " + FormatAgo(ageOf(s.since)) + " ago"
+    age = FormatAgo(ageOf(s.since))
+    if s.state = "waiting"
+        meta = "Done " + age + " ago"
+    else if s.state = "working"
+        meta = "Working  ·  " + age
+    else if s.needsYou = true
+        meta = StateText(s.state) + "  ·  " + age
+    else
+        meta = StateText(s.state)
+    end if
     if AsText(s.branch) <> "" then meta = meta + "  ·  " + AsText(s.branch)
     if AsText(s.folder) <> "" and AsText(s.folder) <> AsText(s.project) then meta = meta + "  ·  " + AsText(s.folder)
     if m.manyHosts = true then meta = meta + "  ·  " + ShortHost(s.host)
