@@ -1,5 +1,5 @@
 import { createServer } from 'node:http';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { hostname } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { parseArgs } from 'node:util';
@@ -16,6 +16,7 @@ const { values: args } = parseArgs({
     'no-summaries': { type: 'boolean', default: false },
     roku: { type: 'string', default: process.env.TALLY_ROKU ?? '' },
     forward: { type: 'string', default: process.env.TALLY_FORWARD ?? '' },
+    data: { type: 'string', default: process.env.TALLY_DATA ?? '' },
   },
 });
 
@@ -47,7 +48,8 @@ const board = new Board({
 });
 
 const CHARACTERS = join(import.meta.dirname, '..', 'characters');
-const cast = new Cast(CHARACTERS);
+if (args.data) mkdirSync(args.data, { recursive: true });
+const cast = new Cast(CHARACTERS, args.data || CHARACTERS);
 if (args.verbose) log(`cast: ${cast.characters.map((c) => c.id).join(', ') || 'none'}`);
 
 const peers = new Peers();

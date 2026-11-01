@@ -59,7 +59,7 @@ if (mode !== 'install' && mode !== 'uninstall') {
 const { script, events } = SETS[set];
 const settingsPath = join(homedir(), '.claude', 'settings.json');
 const hookScript = resolve(import.meta.dirname, '..', 'hook', script).replaceAll('\\', '/');
-const isOurs = (h) => (h.args ?? []).includes(hookScript);
+const isOurs = (h) => (h.args ?? []).some((a) => a.replaceAll('\\', '/').endsWith(`/hook/${script}`));
 
 const settings = JSON.parse(readFileSync(settingsPath, 'utf8'));
 const backup = settingsPath + '.tally-bak';

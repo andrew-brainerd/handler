@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Tally</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<nav>
+  <span class="brand"><span id="lamp" class="lamp"></span>Tally</span>
+  <button data-page="board" class="tab on">Board</button>
+  <button data-page="settings" class="tab">Settings</button>
+  <span id="relay-state" class="relay-state"></span>
+</nav>
+
+<main>
+  <section id="board" class="page on">
+    <iframe id="frame" title="Board"></iframe>
+    <div id="down" class="down" hidden>
+      <p>The relay isn't answering yet.</p>
+      <p class="dim" id="down-detail"></p>
+    </div>
+  </section>
+
+  <section id="settings" class="page">
+    <form id="form">
+      <h2>This computer</h2>
+      <fieldset class="role">
+        <label><input type="radio" name="role" value="main"> <b>Main</b> <span class="dim">This computer shows the board and drives the TVs.</span></label>
+        <label><input type="radio" name="role" value="forward"> <b>Forward to the main relay</b> <span class="dim">Sessions here appear on another computer's board.</span></label>
+      </fieldset>
+      <label class="field" id="forward-field">Main relay address
+        <input name="forwardUrl" placeholder="http://192.168.4.55:8790" spellcheck="false">
+      </label>
+      <label class="field">Port
+        <input name="port" type="number" min="1024" max="65535">
+        <span class="hint">The hooks post to port 8790, so change this only if they do too.</span>
+      </label>
+      <label class="field" id="roku-field">Roku TVs to alert
+        <input name="rokuIps" placeholder="192.168.4.46" spellcheck="false">
+        <span class="hint">IP addresses, separated by commas. Leave empty for none.</span>
+      </label>
+
+      <h2>Behaviour</h2>
+      <label class="check"><input type="checkbox" name="summaries"> One-line summaries (runs Claude Haiku after each turn)</label>
+      <label class="check"><input type="checkbox" name="notifications"> Desktop notifications when a session needs you</label>
+      <label class="check"><input type="checkbox" name="startOnLogin"> Start Tally when I sign in</label>
+      <label class="field">Node.js
+        <input name="nodePath" placeholder="Found automatically" spellcheck="false">
+        <span class="hint" id="node-found"></span>
+      </label>
+
+      <div class="actions">
+        <button type="submit" class="primary">Save</button>
+        <span id="saved" class="dim"></span>
+      </div>
+    </form>
+
+    <div class="panel">
+      <h2>Claude Code hooks</h2>
+      <p class="dim">The hooks tell the relay what each Claude Code session is doing. They live in <code>~/.claude/settings.json</code>.</p>
+      <div class="actions">
+        <button id="install">Install hooks</button>
+        <button id="uninstall">Remove hooks</button>
+      </div>
+      <pre id="hooks-out" hidden></pre>
+
+      <h2>Relay</h2>
+      <p id="relay-detail" class="dim"></p>
+      <div class="actions">
+        <button id="restart">Restart relay</button>
+      </div>
+      <pre id="log"></pre>
+    </div>
+  </section>
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>

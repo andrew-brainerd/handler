@@ -8,9 +8,9 @@ export class Cast {
   characters = [];
   assignments = {};
 
-  constructor(dir) {
+  constructor(dir, dataDir = dir) {
     this.dir = dir;
-    this.file = join(dir, 'assignments.json');
+    this.file = join(dataDir, 'assignments.json');
     this.reload();
     try {
       this.assignments = JSON.parse(readFileSync(this.file, 'utf8'));
