@@ -13,6 +13,7 @@ pub struct Settings {
     pub roku_ips: String,
     pub quiet_hours: String,
     pub notifications: bool,
+    pub ask_tv: bool,
     pub start_on_login: bool,
     pub node_path: String,
 }
@@ -34,6 +35,7 @@ impl Default for Settings {
             roku_ips: String::new(),
             quiet_hours: String::new(),
             notifications: true,
+            ask_tv: true,
             start_on_login: true,
             node_path: String::new(),
         }

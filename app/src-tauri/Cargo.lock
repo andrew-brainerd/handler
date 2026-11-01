@@ -3467,6 +3467,7 @@ dependencies = [
  "tauri-plugin-autostart",
  "tauri-plugin-notification",
  "tauri-plugin-single-instance",
+ "tauri-winrt-notification",
  "ureq",
 ]
 

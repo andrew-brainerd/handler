@@ -19,3 +19,6 @@ tauri-plugin-autostart = "~2.7.0"
 tauri-plugin-notification = "~2.8.0"
 tauri-plugin-single-instance = "~2.5.4"
 ureq = { version = "2.12", default-features = false, features = ["json"] }
+
+[target.'cfg(windows)'.dependencies]
+tauri-winrt-notification = "0.8"

@@ -1,5 +1,6 @@
 mod relay;
 mod settings;
+mod tv;
 mod watch;
 #[allow(dead_code)]
 mod desk;
@@ -108,9 +109,10 @@ fn reveal(app: &AppHandle, page: &str) {
 fn tray(app: &tauri::App, saved: &Settings) -> tauri::Result<()> {
     let board = MenuItem::with_id(app, "board", "Open board", true, None::<&str>)?;
     let settings = MenuItem::with_id(app, "settings", "Settings", true, None::<&str>)?;
+    let show_tv = MenuItem::with_id(app, "tv", "Show on TV", true, None::<&str>)?;
     let pause = CheckMenuItem::with_id(app, "pause", "Pause notifications", true, !saved.notifications, None::<&str>)?;
     let quit = MenuItem::with_id(app, "quit", "Quit Tally", true, None::<&str>)?;
-    let menu = Menu::with_items(app, &[&board, &settings, &pause, &PredefinedMenuItem::separator(app)?, &quit])?;
+    let menu = Menu::with_items(app, &[&board, &show_tv, &settings, &pause, &PredefinedMenuItem::separator(app)?, &quit])?;
     TrayIconBuilder::with_id("main")
         .tooltip("Tally")
         .menu(&menu)
@@ -118,6 +120,7 @@ fn tray(app: &tauri::App, saved: &Settings) -> tauri::Result<()> {
         .on_menu_event(|app, event| match event.id.as_ref() {
             "board" => reveal(app, "board"),
             "settings" => reveal(app, "settings"),
+            "tv" => watch::show_everywhere(tv::ips(&app.state::<Relay>().settings().roku_ips)),
             "pause" => {
                 let paused = app.state::<PauseItem>().0.is_checked().unwrap_or(false);
                 let next = Settings { notifications: !paused, ..app.state::<Relay>().settings() };

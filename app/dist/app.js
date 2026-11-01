@@ -34,6 +34,7 @@ function read() {
     rokuIps: data.get('rokuIps').trim(),
     quietHours: data.get('quietHours').trim(),
     notifications: form.elements.notifications.checked,
+    askTv: form.elements.askTv.checked,
     startOnLogin: form.elements.startOnLogin.checked,
     nodePath: data.get('nodePath').trim(),
   };
