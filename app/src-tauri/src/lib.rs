@@ -1,6 +1,8 @@
 mod relay;
 mod settings;
 mod watch;
+#[allow(dead_code)]
+mod desk;
 
 use std::path::PathBuf;
 use std::process::Command;
