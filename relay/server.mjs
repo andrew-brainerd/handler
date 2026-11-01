@@ -150,10 +150,12 @@ function readBody(req) {
 
 const page = () => readFileSync(join(import.meta.dirname, 'public', 'index.html'));
 
+const DEMO_BASE = Date.now();
+
 function demoStatus() {
   const demo = JSON.parse(readFileSync(join(import.meta.dirname, 'public', 'demo.json'), 'utf8'));
   const ids = cast.characters.map((c) => c.id);
-  const at = (offset) => new Date(Date.now() + Number(offset) * 1000).toISOString();
+  const at = (offset) => new Date(DEMO_BASE + Number(offset) * 1000).toISOString();
   demo.sessions.forEach((s, i) => {
     if (ids.length) s.character = cast.describe({ character: ids[i % ids.length], tint: Math.floor(i / ids.length) * 55 });
     for (const key of ['since', 'lastEvent', 'started']) s[key] = at(s[key]);
