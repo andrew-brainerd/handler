@@ -75,6 +75,16 @@
   .ago { font-size: 26px; color: var(--dim); font-variant-numeric: tabular-nums; text-align: right; }
   .more { flex: 0 0 64px; display: flex; align-items: center; justify-content: center; font-size: 30px; color: var(--dim); }
   .empty { flex: 1; display: flex; align-items: center; justify-content: center; font-size: 48px; color: var(--dim); }
+  .slide { flex: 1; display: grid; grid-template-columns: 200px minmax(0, 1fr); grid-template-rows: auto auto 1fr auto; column-gap: 24px; min-height: 0; cursor: pointer; }
+  .slide .avatar { width: 192px; height: 192px; margin: 0; font-size: 96px; border-radius: 28px; --accent: var(--amber); grid-row: 1 / 3; }
+  .slide h2 { font-size: 52px; margin: 0; align-self: end; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .slide .meta { font-size: 30px; color: var(--amber); margin-top: 8px; }
+  .slide .meta + .gist { margin-top: 10px; }
+  .slide .gist { grid-column: 2; font-size: 30px; color: var(--dim); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .slide .message { grid-column: 1 / -1; border-top: 2px solid var(--line); margin-top: 28px; padding-top: 28px; font-size: 32px; color: var(--text); overflow: hidden; min-height: 0; }
+  .slide .message.long { font-size: 28px; }
+  .slide .message.longer { font-size: 24px; }
+  .slide .footer { grid-column: 1 / -1; text-align: center; font-size: 26px; color: var(--dim); padding-top: 16px; }
   .offline { position: absolute; right: 72px; bottom: 28px; font-size: 24px; color: var(--amber); display: none; }
   .offline.show { display: block; }
   #detail { position: absolute; inset: 0; z-index: 4; background: var(--bg); padding: 72px 96px; display: none; flex-direction: column; gap: 22px; font-size: 30px; overflow: auto; }
@@ -108,6 +118,11 @@
   let seenNeedsYou = new Set();
   let openId = null;
   let bannerTimer = null;
+  let slideId = null;
+  let browsingUntil = 0;
+  let slideTimer = null;
+  const SLIDE_MS = 20000;
+  const BROWSE_MS = 30000;
 
   function fit() {
     const stage = $('stage');
@@ -232,6 +247,40 @@
       <div class="label">Recent activity</div><ol>${s.activity.map((a) => (a.startsWith('↳ ') ? `<li><span style="color:var(--dim)">▸ subagent:</span> ${esc(a.slice(2))}</li>` : `<li>${esc(a)}</li>`)).join('')}</ol>`;
   }
 
+  function slideIds(sessions) {
+    if (Date.now() < browsingUntil) return [];
+    if (sessions.some((s) => s.needsYou || s.state === 'working')) return [];
+    return sessions.filter((s) => s.state === 'waiting').map((s) => s.id);
+  }
+
+  function slide(s, ids) {
+    const where = manyHosts ? shortHost(s.host) : '';
+    const meta = [`Done <span class="slide-ago" data-since="${s.since}">${ago(s.since)}</span> ago`, s.branch && esc(s.branch), s.folder && s.folder !== s.project && esc(s.folder), where && esc(where)].filter(Boolean).join(' · ');
+    const text = s.lastMessage ?? '';
+    const size = text.length > 2200 ? ' longer' : text.length > 1400 ? ' long' : '';
+    const hints = ['click for details', 'up or down for the board'];
+    if (ids.length > 1) hints.unshift(`${ids.indexOf(s.id) + 1} of ${ids.length}`, 'left or right to step');
+    return `<div class="slide" data-id="${s.id}">
+      ${s.character ? `<div class="avatar-slot" data-key="${esc(avatarKey(s))}"></div>` : `<div class="avatar" style="--hue:${hue(s.project)}">${esc(s.project[0]?.toUpperCase() ?? '?')}</div>`}
+      <h2>${esc(s.project)}</h2>
+      <div><div class="meta">${meta}</div><div class="gist">${esc(s.summary ?? '')}</div></div>
+      <div class="message md${size}">${markdown(text)}</div>
+      <div class="footer">${hints.join(' · ')}</div>
+    </div>`;
+  }
+
+  function stepSlide(delta) {
+    const ids = slideIds(status.sessions);
+    if (ids.length < 2) return;
+    slideId = ids[(ids.indexOf(slideId) + delta + ids.length) % ids.length];
+    render();
+  }
+
+  function restartSlides() {
+    clearInterval(slideTimer);
+    slideTimer = setInterval(() => stepSlide(1), SLIDE_MS);
+  }
+
   function markdown(text) {
     return esc(text)
       .replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>')
@@ -293,7 +342,14 @@
     const sessions = status.sessions;
     const shown = fitRows(sessions, $('rows').clientHeight);
     manyHosts = new Set(sessions.map((s) => shortHost(s.host))).size > 1;
-    $('rows').innerHTML = sessions.length
+    const ids = slideIds(sessions);
+    if (ids.length && !ids.includes(slideId)) {
+      slideId = ids[0];
+      restartSlides();
+    }
+    $('rows').innerHTML = ids.length
+      ? slide(sessions.find((s) => s.id === slideId), ids)
+      : sessions.length
       ? shown.map(row).join('') + (shown.length < sessions.length ? `<div class="more">+${sessions.length - shown.length} more</div>` : '')
       : '<div class="empty">No agents running</div>';
     mountAvatars(sessions);
@@ -309,7 +365,7 @@
 
   function tick() {
     $('clock').textContent = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-    document.querySelectorAll('.ago').forEach((el) => (el.textContent = ago(el.dataset.since)));
+    document.querySelectorAll('.ago, .slide-ago').forEach((el) => (el.textContent = ago(el.dataset.since)));
   }
 
   let first = true;
@@ -358,7 +414,7 @@
   }
 
   $('rows').addEventListener('click', (e) => {
-    const el = e.target.closest('.row[data-id]');
+    const el = e.target.closest('.row[data-id], .slide[data-id]');
     if (el) {
       openId = el.dataset.id;
       render();
@@ -372,6 +428,13 @@
     if (e.key === 'Escape') {
       openId = null;
       render();
+    } else if (!openId && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+      stepSlide(e.key === 'ArrowLeft' ? -1 : 1);
+      restartSlides();
+    } else if (!openId && (e.key === 'ArrowUp' || e.key === 'ArrowDown') && slideIds(status.sessions).length) {
+      browsingUntil = Date.now() + BROWSE_MS;
+      render();
+      setTimeout(render, BROWSE_MS + 50);
     }
   });
   addEventListener('resize', fit);

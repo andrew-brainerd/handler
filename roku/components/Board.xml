@@ -18,6 +18,7 @@
       <Label id="muteNote" width="520" horizAlign="right" translation="[808, 66]" color="0x8B8F97FF" />
       <Label id="clock" width="500" horizAlign="right" translation="[1348, 56]" color="0x8B8F97FF" />
       <Group id="rows" translation="[72, 152]" />
+      <Group id="slide" translation="[72, 152]" visible="false" />
       <Label id="more" width="1776" horizAlign="center" color="0x8B8F97FF" visible="false" />
       <Label id="empty" text="No agents running" width="1920" height="1080" horizAlign="center" vertAlign="center" color="0x8B8F97FF" visible="false" />
       <Label id="offline" width="1776" horizAlign="right" translation="[72, 1020]" color="0xF2B33DFF" visible="false" />
@@ -44,5 +45,7 @@
     <Timer id="focusTimer" duration="20" />
     <Timer id="shiftTimer" duration="180" repeat="true" />
     <Timer id="noteTimer" duration="4" />
+    <Timer id="slideTimer" duration="20" repeat="true" />
+    <Timer id="browseTimer" duration="30" />
   </children>
 </component>

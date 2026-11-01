@@ -22,6 +22,9 @@ sub init()
     m.muteNote = m.top.findNode("muteNote")
     m.shiftTimer = m.top.findNode("shiftTimer")
     m.noteTimer = m.top.findNode("noteTimer")
+    m.slide = m.top.findNode("slide")
+    m.slideTimer = m.top.findNode("slideTimer")
+    m.browseTimer = m.top.findNode("browseTimer")
 
     m.top.findNode("title").font = MakeFont(44, true)
     m.counts.font = MakeFont(30)
@@ -32,6 +35,7 @@ sub init()
     m.muteNote.font = MakeFont(26)
     m.bannerText.font = MakeFont(32, true)
     m.top.findNode("detailHint").font = MakeFont(26)
+    buildSlide()
 
     m.focusRing = m.rows.createChild("Poster")
     m.focusRing.uri = "pkg:/images/card-focus.9.png"
@@ -54,12 +58,17 @@ sub init()
     m.first = true
     m.focus = -1
     m.openId = ""
+    m.slideIds = []
+    m.slideId = ""
+    m.browsing = false
 
     m.tick.observeField("fire", "onTick")
     m.bannerTimer.observeField("fire", "hideBanner")
     m.focusTimer.observeField("fire", "clearFocus")
     m.shiftTimer.observeField("fire", "shiftStage")
     m.noteTimer.observeField("fire", "showMuteNote")
+    m.slideTimer.observeField("fire", "nextSlide")
+    m.browseTimer.observeField("fire", "stopBrowsing")
     m.shifts = [[0, 0], [10, 6], [-8, 10], [12, -6], [-10, -8], [4, 12], [-12, 2], [8, -10]]
     m.shift = 0
     m.shiftTimer.control = "start"
@@ -144,6 +153,7 @@ sub render()
         hosts[ShortHost(s.host)] = true
     end for
     manyHosts = hosts.Count() > 1
+    m.manyHosts = manyHosts
     keep = {}
     m.shownIds = []
     y = 0
@@ -202,6 +212,7 @@ sub render()
 
     if m.focus >= m.shownIds.Count() then m.focus = m.shownIds.Count() - 1
     showFocus()
+    updateSlides(needs = 0 and working = 0)
     if m.openId <> "" then showDetail(m.openId)
 end sub
 
@@ -213,6 +224,7 @@ sub onTick()
     for each id in m.rowNodes.Keys()
         m.rowNodes[id].ago = FormatAgo(ageOf(m.sinceById[id]))
     end for
+    if m.slide.visible then showSlideAgo()
 end sub
 
 sub alertNew()
@@ -415,6 +427,29 @@ function onKeyEvent(key as string, press as boolean) as boolean
         toggleMute()
         return true
     end if
+    if m.slide.visible and m.openId = ""
+        if key = "left" or key = "right"
+            delta = 1
+            if key = "left" then delta = -1
+            stepSlide(delta)
+            m.slideTimer.control = "stop"
+            m.slideTimer.control = "start"
+            return true
+        end if
+        if key = "OK"
+            showDetail(m.slideId)
+            return true
+        end if
+        if key = "up" or key = "down"
+            m.browsing = true
+            m.browseTimer.control = "stop"
+            m.browseTimer.control = "start"
+            updateSlides(false)
+            return true
+        end if
+    end if
+    if m.browsing then m.browseTimer.control = "stop"
+    if m.browsing then m.browseTimer.control = "start"
     if m.openId <> ""
         if key = "back" or key = "OK"
             closeDetail()
@@ -447,3 +482,136 @@ function onKeyEvent(key as string, press as boolean) as boolean
     end if
     return false
 end function
+
+sub buildSlide()
+    m.slideAvatar = m.slide.createChild("Avatar")
+    m.slideAvatar.translation = [0, 0]
+    m.slideTitle = MakeLabel(m.slide, 52, m.c.text, true)
+    m.slideTitle.width = 1560
+    m.slideTitle.translation = [216, 4]
+    m.slideMeta = MakeLabel(m.slide, 30, m.c.amber)
+    m.slideMeta.width = 1560
+    m.slideMeta.translation = [216, 76]
+    m.slideSummary = MakeLabel(m.slide, 30, m.c.dim)
+    m.slideSummary.width = 1560
+    m.slideSummary.wrap = true
+    m.slideSummary.maxLines = 2
+    m.slideSummary.translation = [216, 124]
+    rule = m.slide.createChild("Rectangle")
+    rule.color = m.c.line
+    rule.width = 1776
+    rule.height = 2
+    rule.translation = [0, 222]
+    m.slideBody = MakeLabel(m.slide, 30, m.c.text)
+    m.slideBody.width = 1776
+    m.slideBody.height = 600
+    m.slideBody.wrap = true
+    m.slideBody.lineSpacing = 6
+    m.slideBody.translation = [0, 252]
+    m.slideFooter = MakeLabel(m.slide, 26, m.c.dim)
+    m.slideFooter.width = 1776
+    m.slideFooter.horizAlign = "center"
+    m.slideFooter.translation = [0, 860]
+end sub
+
+sub updateSlides(allWaiting as boolean)
+    ids = []
+    if allWaiting and not m.browsing and m.status <> invalid
+        for each s in m.status.sessions
+            if s.state = "waiting" then ids.Push(s.id)
+        end for
+    end if
+    m.slideIds = ids
+    on = ids.Count() > 0
+    if not on
+        if m.slide.visible
+            m.slide.visible = false
+            m.slideTimer.control = "stop"
+            m.rows.visible = true
+            m.slideId = ""
+            print "TALLY: slideshow off"
+        end if
+        return
+    end if
+    if not m.slide.visible
+        m.slide.visible = true
+        m.rows.visible = false
+        m.more.visible = false
+        m.focus = -1
+        m.slideTimer.control = "start"
+        print "TALLY: slideshow on ("; ids.Count(); ")"
+    end if
+    m.more.visible = false
+    if slideIndex() < 0 then m.slideId = ids[0]
+    showSlide()
+end sub
+
+function slideIndex() as integer
+    for i = 0 to m.slideIds.Count() - 1
+        if m.slideIds[i] = m.slideId then return i
+    end for
+    return -1
+end function
+
+sub stepSlide(delta as integer)
+    count = m.slideIds.Count()
+    if count = 0 then return
+    i = slideIndex()
+    if i < 0 then i = 0 else i = (i + delta + count) mod count
+    m.slideId = m.slideIds[i]
+    showSlide()
+end sub
+
+sub nextSlide()
+    if m.slideIds.Count() > 1 then stepSlide(1)
+end sub
+
+sub stopBrowsing()
+    m.browsing = false
+    if m.status <> invalid then render()
+end sub
+
+sub showSlide()
+    s = findSession(m.slideId)
+    if s = invalid then return
+    c = s.character
+    if type(c) = "roAssociativeArray" and type(c.tv) = "roAssociativeArray"
+        base = m.top.relayUrl + "/characters/" + c.id + "/"
+        spec = { size: 192, ring: "waiting", bubble: "", cols: c.tv.cols, url: base + c.tv.still, frames: 1, fps: 1, loop: false }
+        if type(c.states) = "roAssociativeArray" and c.states.DoesExist("sleeping")
+            st = c.states["sleeping"]
+            spec.url = base + st.tv
+            spec.frames = st.frames
+            spec.fps = st.fps
+            spec.loop = st.loop
+        end if
+        m.slideAvatar.spec = spec
+        m.slideAvatar.visible = true
+    else
+        m.slideAvatar.visible = false
+    end if
+    title = AsText(s.project)
+    m.slideTitle.text = title
+    m.slideSummary.text = AsText(s.summary)
+    body = plainText(AsText(s.lastMessage))
+    size = 32
+    if Len(body) > 1400 then size = 28
+    if Len(body) > 2200 then size = 24
+    m.slideBody.font = MakeFont(size)
+    m.slideBody.text = body
+    showSlideAgo()
+end sub
+
+sub showSlideAgo()
+    s = findSession(m.slideId)
+    if s = invalid then return
+    meta = "Done " + FormatAgo(ageOf(s.since)) + " ago"
+    if AsText(s.branch) <> "" then meta = meta + "  ·  " + AsText(s.branch)
+    if AsText(s.folder) <> "" and AsText(s.folder) <> AsText(s.project) then meta = meta + "  ·  " + AsText(s.folder)
+    if m.manyHosts = true then meta = meta + "  ·  " + ShortHost(s.host)
+    m.slideMeta.text = meta
+    count = m.slideIds.Count()
+    footer = "OK for details  ·  up or down for the board"
+    if count > 1 then footer = (slideIndex() + 1).ToStr() + " of " + count.ToStr() + "  ·  left or right to step  ·  " + footer
+    m.slideFooter.text = footer
+end sub
