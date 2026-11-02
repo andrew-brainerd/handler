@@ -26,8 +26,10 @@ sub init()
     m.slideTimer = m.top.findNode("slideTimer")
     m.browseTimer = m.top.findNode("browseTimer")
 
-    m.top.findNode("title").font = MakeFont(44, true)
+    title = m.top.findNode("title")
+    title.font = MakeFont(44, true)
     m.counts.font = MakeFont(30)
+    m.counts.translation = [title.translation[0] + title.boundingRect().width + 24, 66]
     m.clock.font = MakeFont(40)
     m.more.font = MakeFont(30)
     m.empty.font = MakeFont(48)
