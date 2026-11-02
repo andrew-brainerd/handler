@@ -25,10 +25,10 @@ sub ShowBoard(screensaver as boolean)
         if kind = "roSGScreenEvent" and msg.IsScreenClosed() then return
         if kind = "roInputEvent"
             info = msg.GetInfo()
-            if info <> invalid and info.tally = "alert"
+            if info <> invalid and info.handler = "alert"
                 pokes = pokes + 1
                 scene.poke = pokes
-                print "TALLY: ECP alert "; info.seq
+                print "HANDLER: ECP alert "; info.seq
             end if
         end if
     end while

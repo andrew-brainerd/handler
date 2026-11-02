@@ -3,7 +3,7 @@ import { hostname } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const out = process.env.TALLY_SPIKE_LOG ?? join(dirname(fileURLToPath(import.meta.url)), '..', 'spike', 'events.jsonl');
+const out = process.env.HANDLER_SPIKE_LOG ?? join(dirname(fileURLToPath(import.meta.url)), '..', 'spike', 'events.jsonl');
 const started = Date.now();
 
 let raw = '';

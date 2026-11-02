@@ -122,7 +122,7 @@ const root = path.resolve(import.meta.dirname, '..');
 export function buildChannelZip(relayUrl) {
   const buildDir = path.join(root, 'build');
   const stage = path.join(buildDir, 'stage');
-  const zip = path.join(buildDir, 'tally.zip');
+  const zip = path.join(buildDir, 'handler.zip');
   fs.rmSync(stage, { recursive: true, force: true });
   fs.mkdirSync(stage, { recursive: true });
   fs.cpSync(path.join(root, 'roku'), stage, { recursive: true });

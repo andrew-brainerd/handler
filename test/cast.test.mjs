@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { Cast } from '../relay/cast.mjs';
 
 function castWith(ids) {
-  const dir = mkdtempSync(join(tmpdir(), 'tally-cast-'));
+  const dir = mkdtempSync(join(tmpdir(), 'handler-cast-'));
   for (const id of ids) {
     mkdirSync(join(dir, id));
     writeFileSync(join(dir, id, 'character.json'), JSON.stringify({ id, frame: { w: 64, h: 64 }, still: 'still.png', states: {} }));

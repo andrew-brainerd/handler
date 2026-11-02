@@ -16,11 +16,11 @@ const { values: args } = parseArgs({
     port: { type: 'string', default: '8790' },
     verbose: { type: 'boolean', short: 'v', default: false },
     'no-summaries': { type: 'boolean', default: false },
-    roku: { type: 'string', default: process.env.TALLY_ROKU ?? '' },
-    forward: { type: 'string', default: process.env.TALLY_FORWARD ?? '' },
-    data: { type: 'string', default: process.env.TALLY_DATA ?? '' },
+    roku: { type: 'string', default: process.env.HANDLER_ROKU ?? '' },
+    forward: { type: 'string', default: process.env.HANDLER_FORWARD ?? '' },
+    data: { type: 'string', default: process.env.HANDLER_DATA ?? '' },
     parent: { type: 'string', default: '' },
-    quiet: { type: 'string', default: process.env.TALLY_QUIET ?? '' },
+    quiet: { type: 'string', default: process.env.HANDLER_QUIET ?? '' },
   },
 });
 
@@ -113,7 +113,7 @@ function pushToRokus(snap) {
   needsYouKeys = keys;
   if (!fresh) return;
   for (const ip of rokus) {
-    fetch(`http://${ip}:8060/input?tally=alert&seq=${snap.seq}`, { method: 'POST', signal: AbortSignal.timeout(2000) })
+    fetch(`http://${ip}:8060/input?handler=alert&seq=${snap.seq}`, { method: 'POST', signal: AbortSignal.timeout(2000) })
       .then((res) => args.verbose && log(`roku ${ip} alert → ${res.status}`))
       .catch((err) => args.verbose && log(`roku ${ip} alert failed: ${err.message}`));
   }
@@ -295,4 +295,4 @@ if (args.parent) {
   }, 3000);
 }
 
-server.listen(Number(args.port), '0.0.0.0', () => log(`Tally relay on http://localhost:${args.port}/`));
+server.listen(Number(args.port), '0.0.0.0', () => log(`Handler relay on http://localhost:${args.port}/`));

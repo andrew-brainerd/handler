@@ -149,7 +149,7 @@ impl Relay {
     pub fn note(&self, line: &str) {
         use std::io::Write;
         if let Ok(mut log) = OpenOptions::new().create(true).append(true).open(&self.paths.log) {
-            let _ = writeln!(log, "tally: {line}");
+            let _ = writeln!(log, "handler: {line}");
         }
     }
 

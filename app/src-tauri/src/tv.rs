@@ -5,7 +5,7 @@ const WAKE: Duration = Duration::from_secs(5);
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Screen {
-    Tally,
+    Handler,
     Off,
     Other(String),
     Unreachable,
@@ -41,7 +41,7 @@ pub fn read_screen(device_info: &str, active_app: &str) -> Screen {
         return Screen::Off;
     }
     if attr(active_app, "app", "id") == Some(CHANNEL) || attr(active_app, "screensaver", "id") == Some(CHANNEL) {
-        return Screen::Tally;
+        return Screen::Handler;
     }
     if attr(active_app, "app", "type") == Some("home") || tag(active_app, "app") == Some("Roku") {
         return Screen::Other("the home screen".into());
@@ -88,7 +88,7 @@ pub fn show(tv: &Tv) -> Result<(), String> {
 
 pub fn question(tvs: &[Tv]) -> (String, String) {
     let names: Vec<&str> = tvs.iter().map(|t| t.name.as_str()).collect();
-    let title = format!("Show Tally on the {}?", names.join(" and "));
+    let title = format!("Show Handler on the {}?", names.join(" and "));
     let body = tvs
         .iter()
         .map(|t| match &t.screen {
@@ -110,17 +110,17 @@ mod tests {
 
     #[test]
     fn reads_what_the_tv_shows() {
-        let tally = r#"<active-app><app id="dev" type="appl" version="0.1.1">Tally</app></active-app>"#;
+        let handler = r#"<active-app><app id="dev" type="appl" version="0.1.1">Handler</app></active-app>"#;
         let home = "<active-app>\n\t<app>Roku</app>\n</active-app>";
         let netflix = r#"<active-app><app id="12" type="appl">Netflix</app></active-app>"#;
-        let saver = r#"<active-app><app>Roku</app><screensaver id="dev" type="ssvr">Tally</screensaver></active-app>"#;
-        assert_eq!(read_screen(ON, tally), Screen::Tally);
-        assert_eq!(read_screen(ON, saver), Screen::Tally);
+        let saver = r#"<active-app><app>Roku</app><screensaver id="dev" type="ssvr">Handler</screensaver></active-app>"#;
+        assert_eq!(read_screen(ON, handler), Screen::Handler);
+        assert_eq!(read_screen(ON, saver), Screen::Handler);
         assert_eq!(read_screen(ON, home), Screen::Other("the home screen".into()));
         let dynamic = r#"<active-app><app id="562859" type="home" ui-location="home">Roku Dynamic Menu</app></active-app>"#;
         assert_eq!(read_screen(ON, dynamic), Screen::Other("the home screen".into()));
         assert_eq!(read_screen(ON, netflix), Screen::Other("Netflix".into()));
-        assert_eq!(read_screen(STANDBY, tally), Screen::Off);
+        assert_eq!(read_screen(STANDBY, handler), Screen::Off);
         assert_eq!(tag(ON, "friendly-device-name"), Some("Office TV"));
     }
 
@@ -128,10 +128,10 @@ mod tests {
     fn asks_in_plain_words() {
         let tv = |name: &str, screen| Tv { ip: String::new(), name: name.into(), screen };
         let (title, body) = question(&[tv("Office TV", Screen::Other("Netflix".into()))]);
-        assert_eq!(title, "Show Tally on the Office TV?");
+        assert_eq!(title, "Show Handler on the Office TV?");
         assert_eq!(body, "The Office TV is showing Netflix. An agent just started working.");
         let (title, _) = question(&[tv("Office TV", Screen::Off), tv("Den TV", Screen::Off)]);
-        assert_eq!(title, "Show Tally on the Office TV and Den TV?");
+        assert_eq!(title, "Show Handler on the Office TV and Den TV?");
         assert_eq!(ips("192.168.4.46, 10.0.0.2"), vec!["192.168.4.46", "10.0.0.2"]);
     }
 }

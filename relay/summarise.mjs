@@ -82,7 +82,7 @@ function runClaude(prompt) {
     const child = spawn(
       'claude',
       ['-p', '--model', 'haiku', '--no-session-persistence', '--tools', '', '--strict-mcp-config', '--setting-sources', 'project', '--system-prompt', SYSTEM],
-      { cwd: tmpdir(), env: { ...process.env, TALLY_DISABLE: '1' }, windowsHide: true },
+      { cwd: tmpdir(), env: { ...process.env, HANDLER_DISABLE: '1' }, windowsHide: true },
     );
     let out = '';
     const timer = setTimeout(() => {

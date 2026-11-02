@@ -7,7 +7,7 @@ import { Board } from '../relay/state.mjs';
 import { buildInput, cleanLine, summarise } from '../relay/summarise.mjs';
 
 const SID = 'sess-1';
-const base = { session_id: SID, cwd: 'C:\\projects\\tally', transcript_path: 'C:\\t\\sess-1.jsonl' };
+const base = { session_id: SID, cwd: 'C:\\projects\\handler', transcript_path: 'C:\\t\\sess-1.jsonl' };
 
 function board() {
   const b = new Board();
@@ -64,12 +64,12 @@ test('cleanLine takes the first line and strips quotes and the full stop', () =>
 });
 
 test('summarise feeds the transcript to the model and returns its line', async () => {
-  const dir = mkdtempSync(join(tmpdir(), 'tally-'));
+  const dir = mkdtempSync(join(tmpdir(), 'handler-'));
   const path = join(dir, 't.jsonl');
   writeFileSync(path, JSON.stringify({ type: 'user', message: { content: 'ship it' } }) + '\n');
   let prompt = null;
-  const line = await summarise({ project: 'tally', transcriptPath: path }, async (p) => ((prompt = p), 'Shipping it.\n'));
+  const line = await summarise({ project: 'handler', transcriptPath: path }, async (p) => ((prompt = p), 'Shipping it.\n'));
   assert.equal(line, 'Shipping it');
-  assert.match(prompt, /Project: tally/);
+  assert.match(prompt, /Project: handler/);
   assert.match(prompt, /Developer: ship it/);
 });

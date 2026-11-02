@@ -1,11 +1,11 @@
 [package]
-name = "tally"
+name = "handler"
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.90"
 
 [lib]
-name = "tally_lib"
+name = "handler_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

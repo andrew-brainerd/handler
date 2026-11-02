@@ -26,7 +26,7 @@ function fakeWarp(dir) {
 }
 
 test('reads custom tab titles by terminal session id', async () => {
-  const dir = mkdtempSync(join(tmpdir(), 'tally-warp-'));
+  const dir = mkdtempSync(join(tmpdir(), 'handler-warp-'));
   const { path, db } = fakeWarp(dir);
   const warp = new WarpTabs(path);
   await warp.open();
@@ -36,10 +36,10 @@ test('reads custom tab titles by terminal session id', async () => {
   assert.equal(warp.title(B), null);
   assert.equal(warp.title(undefined), null);
 
-  db.exec("update tabs set custom_title = 'Tally' where id = 2");
+  db.exec("update tabs set custom_title = 'Handler' where id = 2");
   assert.equal(warp.refresh(1000), false);
   assert.equal(warp.refresh(5000), true);
-  assert.equal(warp.title(B), 'Tally');
+  assert.equal(warp.title(B), 'Handler');
   assert.equal(warp.refresh(10000), false);
   warp.db.close();
   db.close();
@@ -51,7 +51,7 @@ test('missing database leaves titles empty', async () => {
   await warp.open();
   assert.equal(warp.refresh(), false);
   assert.equal(warp.title(A), null);
-  assert.equal(warpDatabase({ TALLY_WARP_DB: 'x.sqlite' }), 'x.sqlite');
+  assert.equal(warpDatabase({ HANDLER_WARP_DB: 'x.sqlite' }), 'x.sqlite');
 });
 
 test('board shows the tab title and keeps the folder', () => {

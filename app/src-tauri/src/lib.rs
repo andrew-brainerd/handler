@@ -42,7 +42,7 @@ fn apply_start_on_login(app: &AppHandle, enabled: bool) {
     let launcher = app.autolaunch();
     let result = if enabled { launcher.enable() } else { launcher.disable() };
     if let Err(e) = result {
-        eprintln!("Tally start on login failed: {e}");
+        eprintln!("Handler start on login failed: {e}");
     }
 }
 
@@ -111,10 +111,10 @@ fn tray(app: &tauri::App, saved: &Settings) -> tauri::Result<()> {
     let settings = MenuItem::with_id(app, "settings", "Settings", true, None::<&str>)?;
     let show_tv = MenuItem::with_id(app, "tv", "Show on TV", true, None::<&str>)?;
     let pause = CheckMenuItem::with_id(app, "pause", "Pause notifications", true, !saved.notifications, None::<&str>)?;
-    let quit = MenuItem::with_id(app, "quit", "Quit Tally", true, None::<&str>)?;
+    let quit = MenuItem::with_id(app, "quit", "Quit Handler", true, None::<&str>)?;
     let menu = Menu::with_items(app, &[&board, &show_tv, &settings, &pause, &PredefinedMenuItem::separator(app)?, &quit])?;
     TrayIconBuilder::with_id("main")
-        .tooltip("Tally")
+        .tooltip("Handler")
         .menu(&menu)
         .show_menu_on_left_click(false)
         .on_menu_event(|app, event| match event.id.as_ref() {
@@ -161,9 +161,9 @@ mod tests {
 
     #[test]
     fn verbatim_prefix_is_dropped() {
-        assert_eq!(plain_path(PathBuf::from(r"\\?\C:\Users\a\Tally")), PathBuf::from(r"C:\Users\a\Tally"));
+        assert_eq!(plain_path(PathBuf::from(r"\\?\C:\Users\a\Handler")), PathBuf::from(r"C:\Users\a\Handler"));
         assert_eq!(plain_path(PathBuf::from(r"\\?\UNC\srv\share")), PathBuf::from(r"\\?\UNC\srv\share"));
-        assert_eq!(plain_path(PathBuf::from("/Applications/Tally.app")), PathBuf::from("/Applications/Tally.app"));
+        assert_eq!(plain_path(PathBuf::from("/Applications/Handler.app")), PathBuf::from("/Applications/Handler.app"));
     }
 }
 
@@ -191,7 +191,7 @@ pub fn run() {
             let background = args.iter().any(|arg| arg == BACKGROUND_ARG);
             let start = format!("index.html#{}", page_from(&args));
             let window = WebviewWindowBuilder::new(app, "main", WebviewUrl::App(start.into()))
-                .title("Tally")
+                .title("Handler")
                 .inner_size(1280.0, 800.0)
                 .min_inner_size(720.0, 480.0)
                 .background_color(tauri::window::Color(13, 15, 18, 255))
@@ -210,7 +210,7 @@ pub fn run() {
             }
         })
         .build(tauri::generate_context!())
-        .expect("error while building Tally")
+        .expect("error while building Handler")
         .run(|app, event| {
             if let RunEvent::Exit = event {
                 app.state::<Relay>().stop();

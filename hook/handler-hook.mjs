@@ -1,8 +1,8 @@
 import { hostname } from 'node:os';
 
-if (process.env.TALLY_DISABLE === '1') process.exit(0);
+if (process.env.HANDLER_DISABLE === '1') process.exit(0);
 
-const url = process.env.TALLY_URL ?? 'http://127.0.0.1:8790/events';
+const url = process.env.HANDLER_URL ?? 'http://127.0.0.1:8790/events';
 
 const trim = (value, max) => {
   if (typeof value === 'string') return value.length > max ? value.slice(0, max) : value;

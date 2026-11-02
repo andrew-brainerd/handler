@@ -1,9 +1,9 @@
-title=Tally
+title=Handler
 major_version=0
 minor_version=1
 build_version=1
 rsg_version=1.3
-screensaver_title=Tally
+screensaver_title=Handler
 ui_resolutions=fhd
 mm_icon_focus_fhd=pkg:/images/icon_fhd.png
 mm_icon_focus_hd=pkg:/images/icon_hd.png

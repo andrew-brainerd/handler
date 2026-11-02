@@ -257,17 +257,17 @@ impl Doc {
 mod tests {
     use super::*;
 
-    const SPEC: &str = "---\r\nname: tally\r\nstatus: draft\r\nversion: 0.5.3\r\nlast_updated: \"2026-11-01\"\r\ntargets:\r\n  - C:\\projects\\tally\\relay\\** (relay)\r\n  - C:\\projects\\tally\\roku\\**\r\ntags: [a, b]\r\n---\r\n\r\n# Tally\r\n\r\n## §0 Resume notes (read this first)\r\n\r\n- **Current state:** relay built.\r\n\r\n### Detail\r\nmore\r\n\r\n## 1. Overview\r\n\r\n### US-07 — See my workspace\r\n- AC-07.1: First run asks.\r\n- **FR-22a** — Other sources.\r\n- **FR-13** — Relays.\r\nSee FR-13 for more.\r\n\r\n```\r\n## not a heading\r\n- FR-99 inside a fence\r\n```\r\n\r\n## 7. Phases\r\n### Phase A — Spike\r\n- A-1: do it\r\n- **status**: done (2026-10-30).\r\n### Phase B — Relay\r\n- **status**: B-1 done; B-2 in progress.\r\n### Phase C — Roku\r\n- **status**: not started.\r\n";
+    const SPEC: &str = "---\r\nname: handler\r\nstatus: draft\r\nversion: 0.5.3\r\nlast_updated: \"2026-11-01\"\r\ntargets:\r\n  - C:\\projects\\handler\\relay\\** (relay)\r\n  - C:\\projects\\handler\\roku\\**\r\ntags: [a, b]\r\n---\r\n\r\n# Handler\r\n\r\n## §0 Resume notes (read this first)\r\n\r\n- **Current state:** relay built.\r\n\r\n### Detail\r\nmore\r\n\r\n## 1. Overview\r\n\r\n### US-07 — See my workspace\r\n- AC-07.1: First run asks.\r\n- **FR-22a** — Other sources.\r\n- **FR-13** — Relays.\r\nSee FR-13 for more.\r\n\r\n```\r\n## not a heading\r\n- FR-99 inside a fence\r\n```\r\n\r\n## 7. Phases\r\n### Phase A — Spike\r\n- A-1: do it\r\n- **status**: done (2026-10-30).\r\n### Phase B — Relay\r\n- **status**: B-1 done; B-2 in progress.\r\n### Phase C — Roku\r\n- **status**: not started.\r\n";
 
     #[test]
     fn front_matter_with_lists_and_crlf() {
         let doc = parse(SPEC);
-        assert_eq!(doc.front.name.as_deref(), Some("tally"));
+        assert_eq!(doc.front.name.as_deref(), Some("handler"));
         assert_eq!(doc.front.version.as_deref(), Some("0.5.3"));
         assert_eq!(doc.front.last_updated.as_deref(), Some("2026-11-01"));
         assert_eq!(doc.front.targets.len(), 2);
         assert_eq!(doc.front.other.get("tags").map(String::as_str), Some("a, b"));
-        assert_eq!(doc.title.as_deref(), Some("Tally"));
+        assert_eq!(doc.title.as_deref(), Some("Handler"));
     }
 
     #[test]

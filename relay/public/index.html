@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Tally</title>
+<title>Handler</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
   :root {
@@ -102,7 +102,7 @@
 <div id="stage">
   <div id="banner"><span class="dot"></span><span class="text"></span></div>
   <header>
-    <div class="brand"><span class="lamp" id="lamp"></span>Tally</div>
+    <div class="brand"><span class="lamp" id="lamp"></span>Handler</div>
     <div class="counts" id="counts"></div>
     <div class="clock" id="clock"></div>
   </header>
@@ -358,7 +358,7 @@
     const waiting = sessions.filter((s) => s.state === 'waiting').length;
     $('counts').innerHTML = sessions.length ? [needs && `<b>${needs}</b> need you`, working && `<b>${working}</b> working`, waiting && `<b>${waiting}</b> waiting`].filter(Boolean).join(' · ') : '';
     $('lamp').classList.toggle('live', needs > 0);
-    document.title = needs ? `(${needs}) Tally` : 'Tally';
+    document.title = needs ? `(${needs}) Handler` : 'Handler';
     $('detail').innerHTML = detail(sessions.find((s) => s.id === openId));
     $('detail').classList.toggle('show', Boolean(openId && sessions.some((s) => s.id === openId)));
   }

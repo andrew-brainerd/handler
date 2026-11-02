@@ -152,16 +152,16 @@ mod tests {
 
     #[test]
     fn memory_front_matter() {
-        let m = parse_memory("x.md", "---\r\nname: tally-state\r\ndescription: \"Tally board\"\r\nmetadata:\r\n  type: project\r\n---\r\n\r\nBody text.\r\n");
-        assert_eq!(m.name.as_deref(), Some("tally-state"));
-        assert_eq!(m.description.as_deref(), Some("Tally board"));
+        let m = parse_memory("x.md", "---\r\nname: handler-state\r\ndescription: \"Handler board\"\r\nmetadata:\r\n  type: project\r\n---\r\n\r\nBody text.\r\n");
+        assert_eq!(m.name.as_deref(), Some("handler-state"));
+        assert_eq!(m.description.as_deref(), Some("Handler board"));
         assert_eq!(m.kind.as_deref(), Some("project"));
         assert_eq!(m.body, "Body text.");
     }
 
     #[test]
     fn session_info_from_a_transcript() {
-        let dir = std::env::temp_dir().join(format!("tally-desk-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("handler-desk-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let path = dir.join("s.jsonl");
         let lines = [

@@ -85,18 +85,18 @@ mod tests {
 
     #[test]
     fn target_paths_drop_globs_and_comments() {
-        assert_eq!(target_path(r"C:\projects\tally\relay\** (Node relay)"), norm("C:/projects/tally/relay"));
-        assert_eq!(target_path("`C:/projects/tally`"), norm("C:/projects/tally"));
+        assert_eq!(target_path(r"C:\projects\handler\relay\** (Node relay)"), norm("C:/projects/handler/relay"));
+        assert_eq!(target_path("`C:/projects/handler`"), norm("C:/projects/handler"));
     }
 
     #[test]
     fn docs_link_by_target_or_name() {
-        let tally = Path::new(r"C:\projects\tally");
+        let handler = Path::new(r"C:\projects\handler");
         let spec = Path::new(r"C:\projects\docs\specs\other.md");
-        assert!(links(spec, &[r"C:\projects\tally\roku\**".into()], tally));
-        assert!(!links(spec, &[r"C:\projects\tally-old\x".into()], tally));
-        assert!(links(Path::new("tally.md"), &[], tally));
-        assert!(links(Path::new("tally-context.md"), &[], tally));
-        assert!(!links(Path::new("tallyho.md"), &[], tally));
+        assert!(links(spec, &[r"C:\projects\handler\roku\**".into()], handler));
+        assert!(!links(spec, &[r"C:\projects\handler-old\x".into()], handler));
+        assert!(links(Path::new("handler.md"), &[], handler));
+        assert!(links(Path::new("handler-context.md"), &[], handler));
+        assert!(!links(Path::new("handlers.md"), &[], handler));
     }
 }

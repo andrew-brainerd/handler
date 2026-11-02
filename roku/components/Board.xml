@@ -13,7 +13,7 @@
     <Rectangle width="1920" height="1080" color="0x0D0F12FF" />
     <Group id="stage">
       <Poster id="lamp" uri="pkg:/images/lamp-grey.png" width="48" height="48" translation="[60, 48]" />
-      <Label id="title" text="Tally" translation="[118, 52]" color="0xE8E6E1FF" />
+      <Label id="title" text="Handler" translation="[118, 52]" color="0xE8E6E1FF" />
       <Label id="counts" translation="[262, 66]" color="0x8B8F97FF" />
       <Label id="muteNote" width="520" horizAlign="right" translation="[808, 66]" color="0x8B8F97FF" />
       <Label id="clock" width="500" horizAlign="right" translation="[1348, 56]" color="0x8B8F97FF" />

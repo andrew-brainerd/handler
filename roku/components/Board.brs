@@ -72,7 +72,7 @@ sub init()
     m.shifts = [[0, 0], [10, 6], [-8, 10], [12, -6], [-10, -8], [4, 12], [-12, 2], [8, -10]]
     m.shift = 0
     m.shiftTimer.control = "start"
-    m.registry = CreateObject("roRegistrySection", "tally")
+    m.registry = CreateObject("roRegistrySection", "handler")
     m.muted = m.registry.Read("muted") = "1"
     showMuteNote()
     m.top.setFocus(true)
@@ -104,13 +104,13 @@ sub onStatus()
     if result = invalid then return
     if not result.ok
         m.failures = m.failures + 1
-        print "TALLY: status failed "; result.error
+        print "HANDLER: status failed "; result.error
         if m.failures >= 3
-            m.offline.text = "Can't reach Tally relay at " + m.top.relayUrl + " (" + AsText(result.error) + ")"
+            m.offline.text = "Can't reach Handler relay at " + m.top.relayUrl + " (" + AsText(result.error) + ")"
             m.offline.visible = true
             m.rows.opacity = 0.5
             if m.status = invalid
-                m.empty.text = "Waiting for the Tally relay at " + m.top.relayUrl
+                m.empty.text = "Waiting for the Handler relay at " + m.top.relayUrl
                 m.empty.visible = true
             end if
         end if
@@ -268,7 +268,7 @@ sub showBanner(s as object)
         m.chime.control = "stop"
         m.chime.control = "play"
     end if
-    print "TALLY: banner "; m.bannerText.text
+    print "HANDLER: banner "; m.bannerText.text
 end sub
 
 sub hideBanner()
@@ -407,7 +407,7 @@ sub toggleMute()
         m.chime.control = "stop"
         m.chime.control = "play"
     end if
-    print "TALLY: muted "; m.muted
+    print "HANDLER: muted "; m.muted
 end sub
 
 sub showMuteNote()
@@ -535,7 +535,7 @@ sub updateSlides(allWaiting as boolean)
             m.slideTimer.control = "stop"
             m.rows.visible = true
             m.slideId = ""
-            print "TALLY: slideshow off"
+            print "HANDLER: slideshow off"
         end if
         return
     end if
@@ -545,7 +545,7 @@ sub updateSlides(allWaiting as boolean)
         m.more.visible = false
         m.focus = -1
         m.slideTimer.control = "start"
-        print "TALLY: slideshow on ("; ids.Count(); ")"
+        print "HANDLER: slideshow on ("; ids.Count(); ")"
     end if
     m.more.visible = false
     if slideIndex() < 0 then m.slideId = ids[0]

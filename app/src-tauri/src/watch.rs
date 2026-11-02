@@ -78,10 +78,10 @@ fn icon_bytes(light: Light) -> &'static [u8] {
 
 pub fn tooltip(light: Light, working: usize) -> String {
     match light {
-        Light::Off => "Tally: relay not running".into(),
-        Light::Idle => "Tally: nothing running".into(),
-        Light::Working => format!("Tally: {working} working"),
-        Light::NeedsYou(n) => format!("Tally: {n} need{} you", if n == 1 { "s" } else { "" }),
+        Light::Off => "Handler: relay not running".into(),
+        Light::Idle => "Handler: nothing running".into(),
+        Light::Working => format!("Handler: {working} working"),
+        Light::NeedsYou(n) => format!("Handler: {n} need{} you", if n == 1 { "s" } else { "" }),
     }
 }
 
@@ -226,7 +226,7 @@ mod tests {
 
     #[test]
     fn tooltip_counts() {
-        assert_eq!(tooltip(Light::NeedsYou(1), 0), "Tally: 1 needs you");
-        assert_eq!(tooltip(Light::NeedsYou(3), 0), "Tally: 3 need you");
+        assert_eq!(tooltip(Light::NeedsYou(1), 0), "Handler: 1 needs you");
+        assert_eq!(tooltip(Light::NeedsYou(3), 0), "Handler: 3 need you");
     }
 }

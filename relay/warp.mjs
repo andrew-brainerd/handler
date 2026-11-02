@@ -12,7 +12,7 @@ const QUERY = `
   left join pane_leaves l on l.pane_node_id = p.id`;
 
 export function warpDatabase(env = process.env, platform = process.platform) {
-  if (env.TALLY_WARP_DB) return env.TALLY_WARP_DB;
+  if (env.HANDLER_WARP_DB) return env.HANDLER_WARP_DB;
   const candidates =
     platform === 'win32'
       ? [join(env.LOCALAPPDATA ?? '', 'warp', 'Warp', 'data', 'warp.sqlite')]

@@ -80,7 +80,7 @@ async function banner() {
 async function brand(w, h, file, scale) {
   const head = Math.round(h * 0.42);
   const fox = await sharp(FOX).resize(head, head, { kernel: 'nearest' }).png().toBuffer();
-  const text = `<text x="${w / 2}" y="${h * 0.78}" text-anchor="middle" font-family="Segoe UI, Arial" font-weight="700" font-size="${Math.round(h * 0.16 * scale)}" fill="${C.text}">Tally</text>`;
+  const text = `<text x="${w / 2}" y="${h * 0.78}" text-anchor="middle" font-family="Segoe UI, Arial" font-weight="700" font-size="${Math.round(h * 0.16 * scale)}" fill="${C.text}">Handler</text>`;
   await sharp(svg(w, h, `<rect width="${w}" height="${h}" fill="${C.bg}"/>${text}`))
     .composite([{ input: fox, left: Math.round((w - head) / 2), top: Math.round(h * 0.12) }])
     .png()
@@ -120,7 +120,7 @@ function chime() {
   header.writeUInt16LE(16, 34);
   header.write('data', 36);
   header.writeUInt32LE(data.length, 40);
-  const wav = join(tmpdir(), 'tally-chime.wav');
+  const wav = join(tmpdir(), 'handler-chime.wav');
   writeFileSync(wav, Buffer.concat([header, data]));
   mkdirSync(join(ROOT, 'roku', 'sounds'), { recursive: true });
   execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-i', wav, '-c:a', 'aac', '-b:a', '128k', join(ROOT, 'roku', 'sounds', 'chime.m4a')]);

@@ -6,7 +6,7 @@ const { values: opts } = parseArgs({
   options: {
     roku: { type: 'string', default: process.env.ROKU_IP },
     password: { type: 'string' },
-    relay: { type: 'string', default: process.env.TALLY_RELAY_URL },
+    relay: { type: 'string', default: process.env.HANDLER_RELAY_URL },
     port: { type: 'string', default: '8790' },
     'zip-only': { type: 'boolean', default: false },
   },

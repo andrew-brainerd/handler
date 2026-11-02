@@ -140,10 +140,10 @@ mod tests {
             println!("{:<24} {:<18} {:?} | {}", p.name, git, p.manifest.stack, docs.join("; "));
         }
         println!("other docs: {:?}", ws.other_docs.iter().map(|d| d.file.clone()).collect::<Vec<_>>());
-        let tally = ws.projects.iter().find(|p| p.name == "tally").expect("tally project");
-        assert!(tally.docs.iter().any(|d| d.file == "tally.md"));
-        assert!(tally.git.as_ref().is_some_and(|g| g.branch.is_some()));
-        let spec = std::fs::read_to_string(r"C:\projects\docs\specs\tally.md").unwrap();
+        let handler = ws.projects.iter().find(|p| p.name == "handler").expect("handler project");
+        assert!(handler.docs.iter().any(|d| d.file == "handler.md"));
+        assert!(handler.git.as_ref().is_some_and(|g| g.branch.is_some()));
+        let spec = std::fs::read_to_string(r"C:\projects\docs\specs\handler.md").unwrap();
         let d = doc::parse(&spec);
         assert!(d.resume.is_some());
         assert!(d.ids.iter().any(|i| i.id == "FR-13"));

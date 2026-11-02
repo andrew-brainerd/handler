@@ -3,8 +3,8 @@ import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 
 const SETS = {
-  tally: {
-    script: 'tally-hook.mjs',
+  handler: {
+    script: 'handler-hook.mjs',
     events: [
       'SessionStart',
       'UserPromptSubmit',
@@ -50,7 +50,7 @@ const SETS = {
 };
 
 const mode = process.argv[2];
-const set = process.argv.includes('--spike') ? 'spike' : 'tally';
+const set = process.argv.includes('--spike') ? 'spike' : 'handler';
 if (mode !== 'install' && mode !== 'uninstall') {
   console.error('usage: node scripts/hooks.mjs install|uninstall [--spike]');
   process.exit(1);
@@ -62,7 +62,7 @@ const hookScript = resolve(import.meta.dirname, '..', 'hook', script).replaceAll
 const isOurs = (h) => (h.args ?? []).some((a) => a.replaceAll('\\', '/').endsWith(`/hook/${script}`));
 
 const settings = JSON.parse(readFileSync(settingsPath, 'utf8'));
-const backup = settingsPath + '.tally-bak';
+const backup = settingsPath + '.handler-bak';
 if (!existsSync(backup)) copyFileSync(settingsPath, backup);
 
 settings.hooks ??= {};

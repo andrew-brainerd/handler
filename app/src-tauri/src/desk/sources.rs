@@ -194,15 +194,15 @@ mod tests {
 
     #[test]
     fn first_paragraph_skips_headings_badges_and_front_matter() {
-        let md = "---\nname: x\n---\n# Title\n\n[![badge](x)](y)\n\nTally shows agent status\non a TV.\n\nSecond.";
-        assert_eq!(first_paragraph(md).as_deref(), Some("Tally shows agent status on a TV."));
+        let md = "---\nname: x\n---\n# Title\n\n[![badge](x)](y)\n\nHandler shows agent status\non a TV.\n\nSecond.";
+        assert_eq!(first_paragraph(md).as_deref(), Some("Handler shows agent status on a TV."));
         assert_eq!(first_paragraph("# Only a heading\n"), None);
     }
 
     #[test]
     fn toml_reads_package_fields() {
-        let t = "[package]\nname = \"tally\"\ndescription = \"Agent board\"\n\n[dependencies]\nname = \"nope\"\n";
-        assert_eq!(toml_value(t, "package", "name").as_deref(), Some("tally"));
+        let t = "[package]\nname = \"handler\"\ndescription = \"Agent board\"\n\n[dependencies]\nname = \"nope\"\n";
+        assert_eq!(toml_value(t, "package", "name").as_deref(), Some("handler"));
         assert_eq!(toml_value(t, "package", "description").as_deref(), Some("Agent board"));
     }
 }

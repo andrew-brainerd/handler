@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Tally",
+  "productName": "Handler",
   "version": "0.1.0",
-  "identifier": "dev.brainerd.tally",
+  "identifier": "dev.brainerd.handler",
   "build": {
     "frontendDist": "../dist"
   },
@@ -25,7 +25,7 @@
     ],
     "resources": {
       "../../relay/": "relay/",
-      "../../hook/tally-hook.mjs": "hook/tally-hook.mjs",
+      "../../hook/handler-hook.mjs": "hook/handler-hook.mjs",
       "../../scripts/hooks.mjs": "scripts/hooks.mjs",
       "../../characters/": "characters/"
     }
