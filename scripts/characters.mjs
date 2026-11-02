@@ -9,18 +9,35 @@ const TV = { scale: 2, cols: 8 };
 
 const STYLE = 'chibi anime style, cel-shaded with flat colors and two-tone hard-edged shadows, clean bold lines, vibrant saturated palette';
 
-const EXPRESSIONS = {
-  working: { action: 'excited to get attention: ears perk up, eyebrows raise, eyes go wide, mouth opens as if calling out', frames: 8, fps: 10, loop: true },
-  puzzled: { action: 'puzzled: head tilts to one side, one eyebrow raises, a small unsure frown', frames: 8, fps: 8, loop: false },
-  bored: { action: 'bored and unimpressed, eyes stay open the whole time: flat half-lidded stare, eyes roll up and to the side, mouth pulls into a flat sideways frown, a slow sigh', frames: 8, fps: 6, loop: true, pingpong: true },
-  sleepy: { action: 'getting sleepy: eyelids droop, a big yawn, eyes close and the head nods down asleep', frames: 8, fps: 6, loop: false },
-  sleeping: { from: 'sleepy', action: 'fast asleep with eyes closed: slow breathing, the head gently rises and falls, a tiny ear twitch', frames: 8, fps: 5, loop: true, pingpong: true },
+const KINDS = {
+  head: {
+    describe: (subject) => `chibi ${subject} head, ${STYLE}, oversized round head, huge sparkly anime eyes taking up much of the face with big white highlights, tiny mouth, small muzzle, rosy blush cheeks, soft rounded shapes, kawaii, front view looking straight at the viewer, head only, centered`,
+    expressions: {
+      working: { action: 'excited to get attention: ears perk up, eyebrows raise, eyes go wide, mouth opens as if calling out', frames: 8, fps: 10, loop: true },
+      puzzled: { action: 'puzzled: head tilts to one side, one eyebrow raises, a small unsure frown', frames: 8, fps: 8, loop: false },
+      bored: { action: 'bored and unimpressed, eyes stay open the whole time: flat half-lidded stare, eyes roll up and to the side, mouth pulls into a flat sideways frown, a slow sigh', frames: 8, fps: 6, loop: true, pingpong: true },
+      sleepy: { action: 'getting sleepy: eyelids droop, a big yawn, eyes close and the head nods down asleep', frames: 8, fps: 6, loop: false },
+      sleeping: { from: 'sleepy', action: 'fast asleep with eyes closed: slow breathing, the head gently rises and falls, a tiny ear twitch', frames: 8, fps: 5, loop: true, pingpong: true },
+    },
+  },
+  slime: {
+    describe: (subject) => `cute ${subject}, ${STYLE}, round gooey jelly blob with a flat bottom and a glossy white highlight, slightly translucent, big sparkly anime eyes with big white highlights, tiny mouth, rosy blush cheeks, kawaii, front view looking straight at the viewer, whole body, centered`,
+    expressions: {
+      working: { action: 'busy and bouncy: the slime squashes down and springs back up, eyes bright and focused, a small determined smile', frames: 8, fps: 10, loop: true },
+      puzzled: { action: 'puzzled: the slime leans and tilts to one side, one eye squints, a small unsure frown, the body wobbles', frames: 8, fps: 8, loop: false },
+      bored: { action: 'bored and unimpressed, eyes stay open the whole time: flat half-lidded stare, the body slumps and spreads a little flatter, mouth pulls into a flat sideways frown, a slow sigh', frames: 8, fps: 6, loop: true, pingpong: true },
+      sleepy: { action: 'getting sleepy: eyelids droop, a big yawn, the body sags and melts lower, eyes close', frames: 8, fps: 6, loop: false },
+      sleeping: { from: 'sleepy', action: 'fast asleep with eyes closed: slow breathing, the body gently swells and settles', frames: 8, fps: 5, loop: true, pingpong: true },
+    },
+  },
 };
+const kindOf = (meta) => KINDS[meta.kind ?? 'head'];
 
 const { values: args, positionals } = parseArgs({
   allowPositionals: true,
   options: {
-    animal: { type: 'string' },
+    subject: { type: 'string' },
+    kind: { type: 'string' },
     size: { type: 'string', default: '64' },
     only: { type: 'string' },
     redo: { type: 'boolean', default: false },
@@ -80,13 +97,15 @@ async function balance() {
 
 async function create(id) {
   const meta = loadMeta(id);
-  if (existsSync(join(rawDir(id), 'base.png')) && !args.redo) return log(`${id}: base head exists (use --redo to replace)`);
-  const animal = args.animal ?? meta.animal;
-  if (!animal) throw new Error('--animal is required');
+  if (existsSync(join(rawDir(id), 'base.png')) && !args.redo) return log(`${id}: base image exists (use --redo to replace)`);
+  const subject = args.subject ?? meta.subject ?? meta.animal;
+  if (!subject) throw new Error('--subject is required');
+  const kind = args.kind ?? meta.kind ?? 'head';
+  if (!KINDS[kind]) throw new Error(`unknown --kind ${kind}`);
   mkdirSync(rawDir(id), { recursive: true });
   const size = Number(args.size);
   const res = await api('POST', '/create-image-pixen', {
-    description: `chibi ${animal} head, ${STYLE}, oversized round head, huge sparkly anime eyes taking up much of the face with big white highlights, tiny mouth, small muzzle, rosy blush cheeks, soft rounded shapes, kawaii, front view looking straight at the viewer, head only, centered`,
+    description: KINDS[kind].describe(subject),
     image_size: { width: size, height: size },
     view: 'side',
     direction: 'south',
@@ -97,13 +116,14 @@ async function create(id) {
     ...(args.enhance ? { enhance_prompt: true } : {}),
   });
   writeFileSync(join(rawDir(id), 'base.png'), imageBytes(res.image));
-  Object.assign(meta, { animal, size, expressions: args.redo ? {} : meta.expressions });
+  Object.assign(meta, { subject, kind, size, expressions: args.redo ? {} : meta.expressions });
   saveMeta(id, meta);
-  log(`${id}: base head (${animal})`, res.usage ? JSON.stringify(res.usage) : '');
+  log(`${id}: base ${kind} (${subject})`, res.usage ? JSON.stringify(res.usage) : '');
 }
 
 async function animate(id) {
   const meta = loadMeta(id);
+  const EXPRESSIONS = kindOf(meta).expressions;
   const wanted = args.only ? args.only.split(',') : Object.keys(EXPRESSIONS);
   const firstFrame = (spec) => {
     if (!spec.from) return readFileSync(join(rawDir(id), 'base.png')).toString('base64');
@@ -136,6 +156,7 @@ async function animate(id) {
 
 async function exportHead(id) {
   const meta = loadMeta(id);
+  const EXPRESSIONS = kindOf(meta).expressions;
   const files = readdirSync(rawDir(id));
   const strips = {};
   for (const name of Object.keys(meta.expressions).filter((n) => EXPRESSIONS[n])) strips[name] = files.filter((f) => f.startsWith(`${name}-`)).sort().map((f) => readFileSync(join(rawDir(id), f)));
@@ -179,7 +200,7 @@ async function exportHead(id) {
       .toFile(join(dirOf(id), file));
   };
 
-  const out = { id, name: meta.animal, kind: 'head', frame: { w: side, h: side }, still: 'still.png', tv: { frame: tvSide, cols: TV.cols, still: 'still-tv.png' }, states: {} };
+  const out = { id, name: meta.subject ?? meta.animal, kind: meta.kind ?? 'head', frame: { w: side, h: side }, still: 'still.png', tv: { frame: tvSide, cols: TV.cols, still: 'still-tv.png' }, states: {} };
   const still = await tight(base);
   writeFileSync(join(dirOf(id), 'still.png'), still);
   await tvGrid([still], 'still-tv.png');
@@ -214,7 +235,7 @@ const commands = {
 };
 
 if (!commands[command] || (command !== 'balance' && !id)) {
-  console.error('usage: node scripts/characters.mjs balance | create|animate|export|all <id> [--animal "red fox"] [--size 64] [--only working,stale] [--redo] [--seed n]');
+  console.error('usage: node scripts/characters.mjs balance | create|animate|export|all <id> [--subject "red fox"] [--kind head|slime] [--size 64] [--only working,stale] [--redo] [--seed n]');
   process.exit(1);
 }
 await commands[command]();
