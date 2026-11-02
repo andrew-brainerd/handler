@@ -21,7 +21,7 @@ const KINDS = {
     },
   },
   slime: {
-    describe: (subject) => `cute ${subject}, ${STYLE}, round gooey jelly blob with a flat bottom and a glossy white highlight, slightly translucent, big sparkly anime eyes with big white highlights, tiny mouth, rosy blush cheeks, kawaii, front view looking straight at the viewer, whole body, centered`,
+    describe: (subject) => `${subject}, retro 16-bit game monster sprite, clean bold lines, flat colors with two-tone hard-edged shading, round gooey blob with a flat bottom and a glossy highlight, simple solid black oval eyes with one small white highlight, no eyelashes, no blush, small plain mouth, front view looking straight at the viewer, whole body, centered`,
     expressions: {
       working: { action: 'busy and bouncy: the slime squashes down and springs back up, eyes bright and focused, a small determined smile', frames: 8, fps: 10, loop: true },
       puzzled: { action: 'puzzled: the slime leans and tilts to one side, one eye squints, a small unsure frown, the body wobbles', frames: 8, fps: 8, loop: false },
