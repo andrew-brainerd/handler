@@ -1,0 +1,27 @@
+{
+  "expressions": {
+    "puzzled": {
+      "frames": 9,
+      "at": "2026-11-02T16:50:48.550Z"
+    },
+    "bored": {
+      "frames": 9,
+      "at": "2026-11-02T16:50:53.538Z"
+    },
+    "working": {
+      "frames": 9,
+      "at": "2026-11-02T16:50:56.434Z"
+    },
+    "sleepy": {
+      "frames": 9,
+      "at": "2026-11-02T16:50:57.233Z"
+    },
+    "sleeping": {
+      "frames": 9,
+      "at": "2026-11-02T16:53:31.080Z"
+    }
+  },
+  "subject": "forest green slime wearing a small military beret",
+  "kind": "slime",
+  "size": 64
+}

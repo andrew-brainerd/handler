@@ -1,0 +1,27 @@
+{
+  "expressions": {
+    "working": {
+      "frames": 9,
+      "at": "2026-11-02T16:55:07.344Z"
+    },
+    "puzzled": {
+      "frames": 9,
+      "at": "2026-11-02T17:11:22.752Z"
+    },
+    "sleepy": {
+      "frames": 9,
+      "at": "2026-11-02T16:55:45.845Z"
+    },
+    "bored": {
+      "frames": 9,
+      "at": "2026-11-02T16:55:46.082Z"
+    },
+    "sleeping": {
+      "frames": 9,
+      "at": "2026-11-02T16:58:11.186Z"
+    }
+  },
+  "subject": "navy blue slime wearing a small black bow tie",
+  "kind": "slime",
+  "size": 64
+}

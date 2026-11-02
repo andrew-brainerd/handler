@@ -1,0 +1,27 @@
+{
+  "expressions": {
+    "sleepy": {
+      "frames": 9,
+      "at": "2026-11-02T16:45:39.077Z"
+    },
+    "bored": {
+      "frames": 9,
+      "at": "2026-11-02T16:45:51.925Z"
+    },
+    "puzzled": {
+      "frames": 9,
+      "at": "2026-11-02T16:46:16.391Z"
+    },
+    "working": {
+      "frames": 9,
+      "at": "2026-11-02T16:46:27.106Z"
+    },
+    "sleeping": {
+      "frames": 9,
+      "at": "2026-11-02T16:48:06.409Z"
+    }
+  },
+  "subject": "crimson red slime with aviator goggles pushed up on top of its head",
+  "kind": "slime",
+  "size": 64
+}

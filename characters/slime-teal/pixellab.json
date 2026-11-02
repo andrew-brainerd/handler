@@ -1,0 +1,27 @@
+{
+  "expressions": {
+    "bored": {
+      "frames": 9,
+      "at": "2026-11-02T17:06:28.570Z"
+    },
+    "working": {
+      "frames": 9,
+      "at": "2026-11-02T17:06:29.243Z"
+    },
+    "puzzled": {
+      "frames": 9,
+      "at": "2026-11-02T17:11:35.200Z"
+    },
+    "sleepy": {
+      "frames": 9,
+      "at": "2026-11-02T17:06:58.483Z"
+    },
+    "sleeping": {
+      "frames": 9,
+      "at": "2026-11-02T17:09:12.488Z"
+    }
+  },
+  "subject": "teal slime",
+  "kind": "slime",
+  "size": 64
+}

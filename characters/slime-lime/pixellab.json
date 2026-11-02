@@ -1,0 +1,27 @@
+{
+  "expressions": {
+    "sleepy": {
+      "frames": 9,
+      "at": "2026-11-02T17:06:16.142Z"
+    },
+    "bored": {
+      "frames": 9,
+      "at": "2026-11-02T17:06:25.123Z"
+    },
+    "working": {
+      "frames": 9,
+      "at": "2026-11-02T17:06:45.392Z"
+    },
+    "puzzled": {
+      "frames": 9,
+      "at": "2026-11-02T17:07:23.089Z"
+    },
+    "sleeping": {
+      "frames": 9,
+      "at": "2026-11-02T17:09:19.909Z"
+    }
+  },
+  "subject": "lime green slime with a short metal antenna on top",
+  "kind": "slime",
+  "size": 64
+}

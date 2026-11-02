@@ -1,0 +1,27 @@
+{
+  "expressions": {
+    "sleepy": {
+      "frames": 9,
+      "at": "2026-11-02T16:50:53.500Z"
+    },
+    "working": {
+      "frames": 9,
+      "at": "2026-11-02T16:50:56.211Z"
+    },
+    "puzzled": {
+      "frames": 9,
+      "at": "2026-11-02T16:51:00.766Z"
+    },
+    "bored": {
+      "frames": 9,
+      "at": "2026-11-02T16:51:44.523Z"
+    },
+    "sleeping": {
+      "frames": 9,
+      "at": "2026-11-02T16:53:37.192Z"
+    }
+  },
+  "subject": "mustard yellow jelly slime with a tiny satellite dish on top",
+  "kind": "slime",
+  "size": 64
+}

@@ -24,7 +24,7 @@ const KINDS = {
     describe: (subject) => `${subject}, retro 16-bit game monster sprite, clean bold lines, flat colors with two-tone hard-edged shading, one smooth rounded dome shape like a water balloon with a flat bottom, a single solid color, one glossy highlight, simple solid black oval eyes with one small white highlight, no eyelashes, no blush, small plain mouth, front view looking straight at the viewer, whole body, centered`,
     expressions: {
       working: { action: 'busy and bouncy: the slime squashes down and springs back up, eyes bright and focused, a small determined smile', frames: 8, fps: 10, loop: true },
-      puzzled: { action: 'puzzled: the slime leans and tilts to one side, one eye squints, a small unsure frown, the body wobbles', frames: 8, fps: 8, loop: false },
+      puzzled: { action: 'puzzled: the slime leans and tilts to one side, both eyes stay solid black ovals, a small unsure frown, the body wobbles', frames: 8, fps: 8, loop: false },
       bored: { action: 'bored and unimpressed, eyes stay open the whole time: flat half-lidded stare, the body slumps and spreads a little flatter, mouth pulls into a flat sideways frown, a slow sigh', frames: 8, fps: 6, loop: true, pingpong: true },
       sleepy: { action: 'getting sleepy: eyelids droop, a big yawn, the body sags and melts lower, eyes close', frames: 8, fps: 6, loop: false },
       sleeping: { from: 'sleepy', action: 'fast asleep with eyes closed: slow breathing, the body gently swells and settles', frames: 8, fps: 5, loop: true, pingpong: true },

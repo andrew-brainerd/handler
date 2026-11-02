@@ -1,0 +1,27 @@
+{
+  "expressions": {
+    "working": {
+      "frames": 9,
+      "at": "2026-11-02T16:59:45.548Z"
+    },
+    "bored": {
+      "frames": 9,
+      "at": "2026-11-02T16:59:50.976Z"
+    },
+    "puzzled": {
+      "frames": 9,
+      "at": "2026-11-02T16:59:54.148Z"
+    },
+    "sleepy": {
+      "frames": 9,
+      "at": "2026-11-02T17:00:30.027Z"
+    },
+    "sleeping": {
+      "frames": 9,
+      "at": "2026-11-02T17:02:37.210Z"
+    }
+  },
+  "subject": "sandy tan slime wearing the upturned collar of a brown trench coat",
+  "kind": "slime",
+  "size": 64
+}

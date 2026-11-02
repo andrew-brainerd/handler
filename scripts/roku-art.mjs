@@ -6,7 +6,7 @@ import sharp from 'sharp';
 
 const ROOT = join(import.meta.dirname, '..');
 const OUT = join(ROOT, 'roku', 'images');
-const FOX = join(ROOT, 'characters', 'fox', 'still.png');
+const MASCOT = join(ROOT, 'characters', 'slime-steel', 'still.png');
 
 const C = { bg: '#0d0f12', card: '#171a1f', line: '#262a31', red: '#ff4d3d', amber: '#f2b33d', green: '#4fd18b', grey: '#5b6068', text: '#e8e6e1', dim: '#8b8f97', avatar: '#0f1216' };
 
@@ -79,10 +79,10 @@ async function banner() {
 
 async function brand(w, h, file, scale) {
   const head = Math.round(h * 0.42);
-  const fox = await sharp(FOX).resize(head, head, { kernel: 'nearest' }).png().toBuffer();
+  const mascot = await sharp(MASCOT).resize(head, head, { kernel: 'nearest' }).png().toBuffer();
   const text = `<text x="${w / 2}" y="${h * 0.78}" text-anchor="middle" font-family="Segoe UI, Arial" font-weight="700" font-size="${Math.round(h * 0.16 * scale)}" fill="${C.text}">Handler</text>`;
   await sharp(svg(w, h, `<rect width="${w}" height="${h}" fill="${C.bg}"/>${text}`))
-    .composite([{ input: fox, left: Math.round((w - head) / 2), top: Math.round(h * 0.12) }])
+    .composite([{ input: mascot, left: Math.round((w - head) / 2), top: Math.round(h * 0.12) }])
     .png()
     .toFile(join(OUT, file));
 }

@@ -1,0 +1,27 @@
+{
+  "expressions": {
+    "bored": {
+      "frames": 9,
+      "at": "2026-11-02T16:59:59.053Z"
+    },
+    "sleepy": {
+      "frames": 9,
+      "at": "2026-11-02T17:00:14.947Z"
+    },
+    "working": {
+      "frames": 9,
+      "at": "2026-11-02T17:00:44.804Z"
+    },
+    "puzzled": {
+      "frames": 9,
+      "at": "2026-11-02T17:13:00.904Z"
+    },
+    "sleeping": {
+      "frames": 9,
+      "at": "2026-11-02T17:04:24.445Z"
+    }
+  },
+  "subject": "charcoal grey slime with a small walkie-talkie strapped to its side",
+  "kind": "slime",
+  "size": 64
+}

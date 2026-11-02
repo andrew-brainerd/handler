@@ -1,0 +1,27 @@
+{
+  "expressions": {
+    "puzzled": {
+      "frames": 9,
+      "at": "2026-11-02T16:55:29.574Z"
+    },
+    "sleepy": {
+      "frames": 9,
+      "at": "2026-11-02T16:55:32.773Z"
+    },
+    "bored": {
+      "frames": 9,
+      "at": "2026-11-02T16:55:38.434Z"
+    },
+    "working": {
+      "frames": 9,
+      "at": "2026-11-02T16:56:03.223Z"
+    },
+    "sleeping": {
+      "frames": 9,
+      "at": "2026-11-02T16:57:51.048Z"
+    }
+  },
+  "subject": "icy white slime wearing a short red scarf",
+  "kind": "slime",
+  "size": 64
+}

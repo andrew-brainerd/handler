@@ -29,10 +29,10 @@ for (const name of ['off', 'idle', 'working']) await sharp(lamp(LAMPS[name])).pn
 for (let n = 1; n <= 9; n++) await sharp(lamp(LAMPS.needs, String(n))).png().toFile(join(TRAY, `needs-${n}.png`));
 await sharp(lamp(LAMPS.needs, '9+')).png().toFile(join(TRAY, 'needs-many.png'));
 
-const fox = await sharp(join(ROOT, 'characters', 'fox', 'still.png')).resize(704, 704, { kernel: 'nearest' }).png().toBuffer();
+const mascot = await sharp(join(ROOT, 'characters', 'slime-steel', 'still.png')).resize(704, 704, { kernel: 'nearest' }).png().toBuffer();
 const plate = Buffer.from(
   '<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024"><rect x="48" y="48" width="928" height="928" rx="200" fill="#161a20" stroke="#3ecf8e" stroke-width="24"/></svg>',
 );
 mkdirSync(join(ROOT, 'build'), { recursive: true });
-writeFileSync(SOURCE, await sharp(plate).composite([{ input: fox, left: 160, top: 176 }]).png().toBuffer());
+writeFileSync(SOURCE, await sharp(plate).composite([{ input: mascot, left: 160, top: 176 }]).png().toBuffer());
 console.log(`tray icons in ${TRAY}; app icon source ${SOURCE} (run: cd app && pnpm tauri icon ../build/app-icon.png)`);
