@@ -10,6 +10,7 @@ import { summarise } from './summarise.mjs';
 import { Forwarder, HEARTBEAT_MS, Peers, sortSessions } from './peers.mjs';
 import { isQuiet, parseQuiet } from './quiet.mjs';
 import { WarpTabs, warpDatabase } from './warp.mjs';
+import { readBoard, writeBoard } from './store.mjs';
 
 const { values: args } = parseArgs({
   options: {
@@ -61,6 +62,16 @@ const board = new Board({
 
 const CHARACTERS = join(import.meta.dirname, '..', 'characters');
 if (args.data) mkdirSync(args.data, { recursive: true });
+const boardFile = args.data ? join(args.data, 'board.json') : null;
+if (boardFile) {
+  try {
+    const restored = board.restore(readBoard(boardFile));
+    if (args.verbose) log(`restored ${restored} sessions from ${boardFile}`);
+  } catch (err) {
+    board.sessions.clear();
+    log(`couldn't restore the board: ${err.message}`);
+  }
+}
 const cast = new Cast(CHARACTERS, args.data || CHARACTERS);
 if (args.verbose) log(`cast: ${cast.characters.map((c) => c.id).join(', ') || 'none'}`);
 
@@ -105,10 +116,12 @@ function broadcast() {
   }, BROADCAST_DELAY_MS);
 }
 
-let needsYouKeys = new Set();
+const needsYouOf = (snap) => new Set(snap.sessions.filter((s) => s.needsYou).map((s) => `${s.id}|${s.since}`));
+
+let needsYouKeys = needsYouOf(status());
 
 function pushToRokus(snap) {
-  const keys = new Set(snap.sessions.filter((s) => s.needsYou).map((s) => `${s.id}|${s.since}`));
+  const keys = needsYouOf(snap);
   const fresh = [...keys].some((k) => !needsYouKeys.has(k));
   needsYouKeys = keys;
   if (!fresh) return;
@@ -272,6 +285,19 @@ setInterval(async () => {
   if (changed) broadcast();
   pumpSummaries();
 }, SWEEP_MS);
+
+if (boardFile) {
+  let savedSeq = board.seq;
+  setInterval(() => {
+    if (board.seq === savedSeq) return;
+    try {
+      writeBoard(boardFile, board.dump());
+      savedSeq = board.seq;
+    } catch (err) {
+      log(`couldn't save the board: ${err.message}`);
+    }
+  }, SWEEP_MS);
+}
 
 if (forwarder) {
   setInterval(() => forwarder.send(), HEARTBEAT_MS);

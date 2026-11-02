@@ -268,3 +268,64 @@ test('last message keeps lines; the row summary is plain text', () => {
   assert.equal(card().lastMessage, 'The **Twitch view** is built.\n\n- In the `nav bar`\n- Alt+T');
   assert.equal(card().summary, 'The Twitch view is built. In the nav bar Alt+T');
 });
+
+const reload = (board, now) => {
+  const fresh = new Board();
+  fresh.restore(JSON.parse(JSON.stringify(board.dump())), now);
+  return fresh;
+};
+
+test('an idle session survives a restart with no new events', () => {
+  const { board, now } = run([
+    { hook_event_name: 'UserPromptSubmit', prompt: 'fix the tap spike' },
+    { hook_event_name: 'Stop', last_assistant_message: 'Waiting on you.' },
+  ]);
+  const before = board.snapshot(now);
+  const fresh = reload(board, now);
+  assert.deepEqual(fresh.snapshot(now), before);
+  assert.equal(fresh.snapshot(now).sessions[0].state, 'waiting');
+});
+
+test('a restored permission prompt still resolves on its next event', () => {
+  const { board, now } = run([
+    { hook_event_name: 'PreToolUse', tool_name: 'Bash', tool_use_id: 't1', tool_input: { command: 'ls' } },
+    { hook_event_name: 'PermissionRequest', tool_name: 'Bash', tool_input: { command: 'ls' } },
+  ]);
+  const fresh = reload(board, now);
+  assert.equal(fresh.snapshot(now).sessions[0].state, 'needs_permission');
+  fresh.apply({ ...base, hook_event_name: 'PostToolUse', tool_name: 'Bash', tool_use_id: 't1' }, now + 1000);
+  assert.equal(fresh.snapshot(now + 1000).sessions[0].state, 'working');
+});
+
+test('restore drops anything quiet for 4 h, even a card that needs you', () => {
+  const { board, now } = run([
+    { hook_event_name: 'PreToolUse', tool_name: 'Bash', tool_use_id: 't1', tool_input: { command: 'ls' } },
+    { hook_event_name: 'PermissionRequest', tool_name: 'Bash', tool_input: { command: 'ls' } },
+  ]);
+  const later = now + 4 * 3600e3 + 1;
+  assert.equal(reload(board, later).snapshot(later).sessions.length, 0);
+});
+
+test('restore drops ended and hidden sessions past their limits', () => {
+  const ended = run([{ hook_event_name: 'UserPromptSubmit', prompt: 'x' }, { hook_event_name: 'SessionEnd', reason: 'other' }]);
+  assert.equal(reload(ended.board, ended.now + 2 * 60e3 + 1).sessions.size, 0);
+  const hidden = run([{ hook_event_name: 'SessionStart', source: 'startup' }]);
+  assert.equal(reload(hidden.board, hidden.now + 10 * 60e3 + 1).sessions.size, 0);
+  assert.equal(reload(hidden.board, hidden.now).snapshot(hidden.now).sessions.length, 0);
+});
+
+test('the save keeps sequence numbers moving forward and leaves out streamed text', () => {
+  const { board, now } = run([
+    { hook_event_name: 'UserPromptSubmit', prompt: 'x' },
+    { hook_event_name: 'MessageDisplay', delta: 'private draft' },
+  ]);
+  assert.ok(!JSON.stringify(board.dump()).includes('private draft'));
+  assert.equal(reload(board, now).seq, board.seq);
+});
+
+test('restore ignores a missing or unknown save', () => {
+  const board = new Board();
+  assert.equal(board.restore(null), 0);
+  assert.equal(board.restore({ version: 99, sessions: [{ id: 'x' }] }), 0);
+  assert.equal(board.sessions.size, 0);
+});

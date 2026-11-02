@@ -11,6 +11,7 @@ const QUIET_WATCH_MS = 30e3;
 const ACTIVITY_KEEP = 20;
 const DONE = 'Done, waiting for you';
 const SUMMARY_EVERY_MS = 60e3;
+const SAVE_VERSION = 1;
 
 export const clip = (text, max) => {
   if (typeof text !== 'string') return null;
@@ -399,6 +400,29 @@ export class Board {
     }
     if (changed) this.seq++;
     return changed;
+  }
+
+  dump() {
+    const sessions = [...this.sessions.values()].map(({ recentText, ...s }) => ({
+      ...s,
+      agents: [...s.agents.values()].map((a) => ({ ...a, open: [...a.open], pending: [...a.pending] })),
+    }));
+    return { version: SAVE_VERSION, seq: this.seq, sessions };
+  }
+
+  restore(saved, now = Date.now()) {
+    if (saved?.version !== SAVE_VERSION || !Array.isArray(saved.sessions)) return 0;
+    for (const s of saved.sessions) {
+      const expired =
+        now - s.lastEvent > IDLE_EXPIRE_MS ||
+        (s.ended && now - s.ended > ENDED_KEEP_MS) ||
+        (!s.visible && now - s.lastEvent > HIDDEN_EXPIRE_MS);
+      if (expired) continue;
+      const agents = new Map(s.agents.map((a) => [a.key, { ...a, open: new Map(a.open), pending: new Map(a.pending) }]));
+      this.sessions.set(s.id, { ...s, recentText: '', agents });
+    }
+    this.seq = Number(saved.seq) || 0;
+    return this.sessions.size;
   }
 
   #sessionView(s, now) {
