@@ -105,7 +105,17 @@ fn discover(relay: tauri::State<Relay>) -> Result<serde_json::Value, String> {
     serde_json::from_str(&text).map_err(|e| e.to_string())
 }
 
+#[cfg(target_os = "macos")]
+fn show_in_dock(app: &AppHandle, visible: bool) {
+    use tauri::ActivationPolicy::{Accessory, Regular};
+    let _ = app.set_activation_policy(if visible { Regular } else { Accessory });
+}
+
+#[cfg(not(target_os = "macos"))]
+fn show_in_dock(_app: &AppHandle, _visible: bool) {}
+
 fn reveal(app: &AppHandle, page: &str) {
+    show_in_dock(app, true);
     if let Some(window) = app.get_webview_window("main") {
         let _ = window.emit("show-page", page);
         let _ = window.set_skip_taskbar(false);
@@ -198,6 +208,9 @@ pub fn run() {
             tray(app, &saved)?;
             let args: Vec<String> = std::env::args().collect();
             let background = args.iter().any(|arg| arg == BACKGROUND_ARG);
+            if background {
+                show_in_dock(handle, false);
+            }
             let start = format!("index.html#{}", page_from(&args));
             let window = WebviewWindowBuilder::new(app, "main", WebviewUrl::App(start.into()))
                 .title("Handler")
@@ -216,13 +229,15 @@ pub fn run() {
             if let WindowEvent::CloseRequested { api, .. } = event {
                 api.prevent_close();
                 let _ = window.hide();
+                show_in_dock(window.app_handle(), false);
             }
         })
         .build(tauri::generate_context!())
         .expect("error while building Handler")
-        .run(|app, event| {
-            if let RunEvent::Exit = event {
-                app.state::<Relay>().stop();
-            }
+        .run(|app, event| match event {
+            RunEvent::Exit => app.state::<Relay>().stop(),
+            #[cfg(target_os = "macos")]
+            RunEvent::Reopen { .. } => reveal(app, "board"),
+            _ => {}
         });
 }
