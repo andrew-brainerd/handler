@@ -40,6 +40,7 @@ end sub
 
 function splitDetail(s as object) as object
     detail = AsText(s.detail)
+    if s.state = "waiting" then return { stateText: WaitingDetail(s), request: "" }
     if s.state <> "needs_permission" or Left(detail, 16) <> "Needs permission"
         if detail = "" then detail = StateText(s.state)
         return { stateText: detail, request: "" }

@@ -355,7 +355,9 @@ sub showDetail(id as string)
     started.ToLocalTime()
     detail = AsText(s.detail)
     if detail = "" then detail = StateText(s.state)
-    meta = detail + "  ·  started " + FormatClock(started)
+    if s.state = "waiting" then detail = WaitingDetail(s)
+    meta = "started " + FormatClock(started)
+    if detail <> "" then meta = detail + "  ·  " + meta
     if AsText(s.host) <> "" then meta = meta + "  ·  " + AsText(s.host)
     addDetail(meta, 30, m.c.dim)
 

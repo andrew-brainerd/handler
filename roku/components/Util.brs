@@ -56,9 +56,15 @@ function FormatClock(dt as object) as string
 end function
 
 function StateText(state as string) as string
-    names = { working: "Working", waiting: "Done, waiting for you", needs_permission: "Needs permission", asking: "Asked a question", stale: "No activity for 30 min", ended: "Ended" }
+    names = { working: "Working", waiting: "Done", needs_permission: "Needs permission", asking: "Asked a question", stale: "No activity for 30 min", ended: "Ended" }
     if names.DoesExist(state) then return names[state]
     return state
+end function
+
+function WaitingDetail(s as object) as string
+    detail = AsText(s.detail)
+    if detail = "Done, waiting for you" then return ""
+    return detail
 end function
 
 function IsCompact(state as string) as boolean

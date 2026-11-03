@@ -120,7 +120,7 @@
   <div id="detail"></div>
 </div>
 <script>
-  const STATE_TEXT = { working: 'Working', waiting: 'Done, waiting for you', needs_permission: 'Needs permission', asking: 'Asked a question', stale: 'No activity for 30 min', ended: 'Ended' };
+  const STATE_TEXT = { working: 'Working', waiting: 'Done', needs_permission: 'Needs permission', asking: 'Asked a question', stale: 'No activity for 30 min', ended: 'Ended' };
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
   let status = { sessions: [] };
@@ -159,6 +159,7 @@
 
   function splitDetail(s) {
     const m = /^Needs permission(?:: (.*?))?(?: \(([^()]+)\))?$/.exec(s.detail ?? '');
+    if (s.state === 'waiting') return { stateText: s.detail === 'Done, waiting for you' ? '' : s.detail ?? '', request: null };
     if (s.state !== 'needs_permission' || !m) return { stateText: s.detail ?? STATE_TEXT[s.state], request: null };
     return { stateText: m[2] ? `Needs permission · ${m[2]}` : 'Needs permission', request: m[1] ?? null };
   }
@@ -234,7 +235,7 @@
     return `<div class="row ${s.state}${COMPACT.has(s.state) ? ' compact' : ''}" data-id="${s.id}">
       ${s.character ? `<div class="avatar-slot" data-key="${esc(avatarKey(s))}"></div>` : `<div class="avatar" style="--hue:${hue(s.project)}">${esc(s.project[0]?.toUpperCase() ?? '?')}</div>`}
       <div class="main">
-        <div class="line1"><span class="project">${esc(s.project)}</span>${branch ? `<span class="branch">${esc(branch)}</span>` : ''}<span class="state">${esc(stateText)}</span></div>
+        <div class="line1"><span class="project">${esc(s.project)}</span>${branch ? `<span class="branch">${esc(branch)}</span>` : ''}${stateText ? `<span class="state">${esc(stateText)}</span>` : ''}</div>
         ${body}
       </div>
       <div class="activity">${lines.join('')}</div>
@@ -247,7 +248,7 @@
     const subs = s.subagentList.map((a) => `<li>${esc(a.type ?? 'subagent')}: ${esc(a.description ?? '')} (${esc(STATE_TEXT[a.state] ?? a.state)})</li>`).join('');
     return `<div class="close">Esc to close</div>
       <h2>${esc(s.project)}${s.branch ? ` <span style="color:var(--dim);font-size:32px">${esc(s.branch)}</span>` : ''}</h2>
-      <div style="color:var(--dim)">${esc(s.detail ?? STATE_TEXT[s.state])} · started ${new Date(s.started).toLocaleTimeString()} · ${esc(s.host ?? '')}</div>
+      <div style="color:var(--dim)">${[s.state === 'waiting' ? splitDetail(s).stateText : s.detail ?? STATE_TEXT[s.state], `started ${new Date(s.started).toLocaleTimeString()}`, s.host ?? ''].filter(Boolean).map(esc).join(' · ')}</div>
       ${s.question ? `<div class="label">Question</div><div>${esc(s.question.text)}</div><div style="color:var(--dim)">${s.question.options.map(esc).join(' · ')}</div>` : ''}
       <div class="label">Summary</div><div>${esc(s.summary ?? '—')}</div>
       ${s.todo ? `<div class="label">Tasks</div><div>${s.todo.done} of ${s.todo.total} done${s.todo.current ? ` · now: ${esc(s.todo.current)}` : ''}</div>` : ''}
