@@ -40,7 +40,8 @@ const SWEEP_MS = 2000;
 const BROADCAST_DELAY_MS = 150;
 const ROKU_PUSH_MS = 30000;
 
-function locate(cwd) {
+function locate(path) {
+  const cwd = process.platform === 'win32' ? path.replace(/^\/([a-z])\//i, '$1:/') : path;
   for (let dir = cwd; ; dir = dirname(dir)) {
     if (existsSync(join(dir, '.git'))) {
       let branch = null;
@@ -48,9 +49,9 @@ function locate(cwd) {
         const head = readFileSync(join(dir, '.git', 'HEAD'), 'utf8').trim();
         branch = head.startsWith('ref: refs/heads/') ? head.slice(16) : head.slice(0, 7);
       } catch {}
-      return { project: basename(dir), branch };
+      return { project: basename(dir), branch, inRepo: true };
     }
-    if (dirname(dir) === dir) return { project: basename(cwd) || cwd, branch: null };
+    if (dirname(dir) === dir) return { project: basename(cwd) || cwd, branch: null, inRepo: false };
   }
 }
 

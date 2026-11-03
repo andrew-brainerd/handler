@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { Board, describeTool, parseInjected } from '../relay/state.mjs';
+import { Board, describeTool, parseInjected, workPaths } from '../relay/state.mjs';
 import { findOutcome } from '../relay/transcript.mjs';
 
 const SID = 'sess-1';
@@ -344,4 +344,48 @@ test('a working session carries the end of what the agent wrote', () => {
   assert.equal(card().output, 'Checking the layout next');
   board.apply({ ...base, hook_event_name: 'Stop', last_assistant_message: 'done' }, 1_000_450);
   assert.equal(card().output, '');
+});
+
+const repos = (path) => {
+  const norm = path.replaceAll('\\', '/');
+  const m = /\/projects\/([^/]+)/.exec(norm);
+  return m ? { project: m[1], branch: `${m[1]}-branch`, inRepo: true } : { project: norm.split('/').pop(), branch: null, inRepo: false };
+};
+const tool = (tool_name, tool_input, extra = {}) => ({ session_id: 'home', cwd: 'C:/Users/me', hook_event_name: 'PreToolUse', tool_name, tool_input, ...extra });
+
+test('a session outside a repo is named after the project it works in', () => {
+  const board = new Board({ locate: repos });
+  const row = () => board.snapshot(5000).sessions[0];
+  board.apply(tool('Bash', { command: 'ls', description: 'List' }), 1000);
+  assert.equal(row().project, 'me');
+  assert.equal(row().branch, null);
+  board.apply(tool('Read', { file_path: 'C:/Users/me/.claude/notes.md' }), 1100);
+  assert.equal(row().project, 'me');
+  board.apply(tool('Edit', { file_path: 'C:\\projects\\drewtube\\src\\a.ts' }), 1200);
+  assert.equal(row().project, 'drewtube');
+  assert.equal(row().branch, 'drewtube-branch');
+  assert.equal(row().folder, 'drewtube');
+  board.apply(tool('Read', { file_path: 'C:/projects/docs/specs/x.md' }), 1300);
+  assert.equal(row().project, 'drewtube');
+  for (let i = 0; i < 2; i++) board.apply(tool('Edit', { file_path: 'C:/projects/handler/relay/a.mjs' }), 1400 + i);
+  assert.equal(row().project, 'handler');
+});
+
+test('a session in a repo keeps its name, and a tab title beats the guess', () => {
+  const board = new Board({ locate: repos, tabName: (id) => (id === 'w' ? 'My tab' : null) });
+  board.apply({ ...tool('Edit', { file_path: 'C:/projects/docs/a.md' }), session_id: 'repo', cwd: 'C:/projects/handler' }, 1000);
+  board.apply({ ...tool('Edit', { file_path: 'C:/projects/docs/a.md' }), session_id: 'tab', warp_session: 'w' }, 1000);
+  const rows = Object.fromEntries(board.snapshot(5000).sessions.map((s) => [s.id, s]));
+  assert.equal(rows.repo.project, 'handler');
+  assert.equal(rows.tab.project, 'My tab');
+  assert.equal(rows.tab.folder, 'docs');
+});
+
+test('workPaths finds where a tool is working', () => {
+  assert.deepEqual(workPaths('Edit', { file_path: 'C:/a/b.ts' }), [{ path: 'C:/a/b.ts', weight: 3 }]);
+  assert.deepEqual(workPaths('Grep', { path: '/Users/me/app' }), [{ path: '/Users/me/app', weight: 1 }]);
+  assert.deepEqual(workPaths('Grep', { path: 'src' }), []);
+  assert.deepEqual(workPaths('Task', { path: 'C:/a' }), []);
+  assert.deepEqual(workPaths('Bash', { command: 'cd /c/projects/docs && git -C "C:/projects/my app" status; cd src' }).map((p) => p.path), ['/c/projects/docs', 'C:/projects/my app']);
+  assert.deepEqual(workPaths('Bash', {}), []);
 });

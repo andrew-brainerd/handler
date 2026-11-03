@@ -15,6 +15,20 @@ const LIVE_IDLE_AFTER_MS = 15e3;
 const SAVE_VERSION = 1;
 
 const OUTPUT_CHARS = 320;
+const WORK_FADE = 0.9;
+const WORK_WEIGHT = { Edit: 3, Write: 3, NotebookEdit: 3, Read: 1, Grep: 1, Glob: 1 };
+const COMMAND_WEIGHT = 2;
+const COMMAND_PATHS = /(?:^|[;&|]\s*)cd\s+("[^"]+"|'[^']+'|\S+)|\bgit\s+-C\s+("[^"]+"|'[^']+'|\S+)/g;
+const isAbsolute = (path) => /^([a-z]:[\\/]|\/)/i.test(path);
+
+export function workPaths(tool, input) {
+  if (tool === 'Bash') {
+    const found = [...String(input?.command ?? '').matchAll(COMMAND_PATHS)].map((m) => (m[1] ?? m[2]).replace(/^["']|["']$/g, ''));
+    return found.filter(isAbsolute).map((path) => ({ path, weight: COMMAND_WEIGHT }));
+  }
+  const path = input?.file_path ?? input?.notebook_path ?? input?.path;
+  return WORK_WEIGHT[tool] && typeof path === 'string' && isAbsolute(path) ? [{ path, weight: WORK_WEIGHT[tool] }] : [];
+}
 
 const tail = (text, max) => {
   const flat = plain(text ?? '')?.replace(/\s+/g, ' ').trim() ?? '';
@@ -157,6 +171,24 @@ export class Board {
     return true;
   }
 
+  #noteWork(s, e) {
+    if (s.inRepo) return;
+    for (const { path, weight } of workPaths(e.tool_name, e.tool_input)) {
+      const found = this.locate(path);
+      if (!found.inRepo) continue;
+      s.work ??= {};
+      for (const repo of Object.values(s.work)) repo.score *= WORK_FADE;
+      const repo = (s.work[found.project] ??= { project: found.project, score: 0 });
+      repo.score += weight;
+      repo.branch = found.branch;
+    }
+  }
+
+  #identity(s) {
+    if (s.inRepo || !s.work) return s;
+    return Object.values(s.work).reduce((best, repo) => (repo.score > (best.score ?? 0) ? repo : best), s);
+  }
+
   #newSession(e, now) {
     return {
       id: e.session_id,
@@ -255,6 +287,7 @@ export class Board {
       const id = e.tool_use_id ?? `~pre-${now}`;
       a.open.set(id, e.tool_name);
       setBase(a, 'working', now);
+      this.#noteWork(s, e);
       if (e.tool_name === 'AskUserQuestion') a.pending.set(id, { tool: e.tool_name, detail: 'Asked a question', question: firstQuestion(e.tool_input), since: now });
       if (e.tool_name === 'TodoWrite' && Array.isArray(e.tool_input?.todos)) {
         const todos = e.tool_input.todos;
@@ -358,7 +391,7 @@ export class Board {
     if (!s) return null;
     s.summaryWanted = s.summaryNow = false;
     s.summaryAt = now;
-    return { sessionId: s.id, turn: s.turn, project: s.project, transcriptPath: s.transcriptPath };
+    return { sessionId: s.id, turn: s.turn, project: this.#identity(s).project, transcriptPath: s.transcriptPath };
   }
 
   setSummary({ sessionId, turn }, text) {
@@ -495,15 +528,16 @@ export class Board {
     for (const s of this.sessions.values()) {
       if (!s.visible) continue;
       const top = this.#sessionView(s, now);
+      const identity = this.#identity(s);
       const subagents = [...s.agents.values()].filter((a) => a.key !== 'main');
       let detail = top.detail;
       if (detail && top.agent.key !== 'main') detail += ` (${top.agent.type ?? 'subagent'})`;
       const todo = s.todo ?? (s.tasks.total ? { current: s.tasks.current, done: s.tasks.done, total: s.tasks.total } : null);
       sessions.push({
         id: s.id,
-        project: this.tabName(s.warpSession) ?? s.project,
-        folder: s.project,
-        branch: s.branch,
+        project: this.tabName(s.warpSession) ?? identity.project,
+        folder: identity.project,
+        branch: identity.branch,
         host: s.host,
         cwd: s.cwd,
         state: top.state,
