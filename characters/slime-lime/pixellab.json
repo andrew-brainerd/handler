@@ -1,27 +1,27 @@
 {
   "expressions": {
-    "sleepy": {
-      "frames": 9,
-      "at": "2026-11-02T17:06:16.142Z"
-    },
     "bored": {
       "frames": 9,
-      "at": "2026-11-02T17:06:25.123Z"
+      "at": "2026-11-03T08:46:05.671Z"
     },
-    "working": {
+    "sleepy": {
       "frames": 9,
-      "at": "2026-11-02T17:06:45.392Z"
+      "at": "2026-11-03T08:46:21.890Z"
     },
     "puzzled": {
       "frames": 9,
-      "at": "2026-11-02T17:07:23.089Z"
+      "at": "2026-11-03T08:46:23.600Z"
+    },
+    "working": {
+      "frames": 9,
+      "at": "2026-11-03T08:47:31.184Z"
     },
     "sleeping": {
       "frames": 9,
-      "at": "2026-11-02T17:09:19.909Z"
+      "at": "2026-11-03T08:50:18.789Z"
     }
   },
-  "subject": "lime green slime with a short metal antenna on top",
+  "subject": "lime green jelly slime with a short metal antenna on top",
   "kind": "slime",
   "size": 64
 }

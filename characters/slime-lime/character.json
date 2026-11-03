@@ -1,25 +1,18 @@
 {
   "id": "slime-lime",
-  "name": "lime green slime with a short metal antenna on top",
+  "name": "lime green jelly slime with a short metal antenna on top",
   "kind": "slime",
   "frame": {
-    "w": 58,
-    "h": 58
+    "w": 49,
+    "h": 49
   },
   "still": "still.png",
   "tv": {
-    "frame": 116,
+    "frame": 98,
     "cols": 8,
     "still": "still-tv.png"
   },
   "states": {
-    "sleepy": {
-      "file": "sleepy.png",
-      "tv": "sleepy-tv.png",
-      "frames": 9,
-      "fps": 6,
-      "loop": false
-    },
     "bored": {
       "file": "bored.png",
       "tv": "bored-tv.png",
@@ -27,12 +20,12 @@
       "fps": 6,
       "loop": true
     },
-    "working": {
-      "file": "working.png",
-      "tv": "working-tv.png",
+    "sleepy": {
+      "file": "sleepy.png",
+      "tv": "sleepy-tv.png",
       "frames": 9,
-      "fps": 10,
-      "loop": true
+      "fps": 6,
+      "loop": false
     },
     "puzzled": {
       "file": "puzzled.png",
@@ -40,6 +33,13 @@
       "frames": 9,
       "fps": 8,
       "loop": false
+    },
+    "working": {
+      "file": "working.png",
+      "tv": "working-tv.png",
+      "frames": 9,
+      "fps": 10,
+      "loop": true
     },
     "sleeping": {
       "file": "sleeping.png",
