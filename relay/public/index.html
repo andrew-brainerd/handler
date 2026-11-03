@@ -84,6 +84,15 @@
   .slide .message { grid-column: 1 / -1; border-top: 2px solid var(--line); margin-top: 28px; padding-top: 28px; font-size: 32px; color: var(--text); overflow: hidden; min-height: 0; }
   .slide .message.long { font-size: 28px; }
   .slide .message.longer { font-size: 24px; }
+  .slide .message .label { margin: 0 0 14px; font-size: 24px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--dim); }
+  .slide .message ol { list-style: disc; margin: 14px 0 0; padding-left: 36px; }
+  .slide .message div + .label { margin-top: 24px; }
+  .slide.working .meta { color: var(--green); }
+  .slide.working .avatar { --accent: var(--green); }
+  .slide.needs .meta { color: var(--red); }
+  .slide.needs .avatar { --accent: var(--red); }
+  .slide.stale .meta, .slide.ended .meta { color: var(--dim); }
+  .slide.stale .avatar, .slide.ended .avatar { --accent: var(--dim); }
   .slide .footer { grid-column: 1 / -1; text-align: center; font-size: 26px; color: var(--dim); padding-top: 16px; }
   .offline { position: absolute; right: 72px; bottom: 28px; font-size: 24px; color: var(--amber); display: none; }
   .offline.show { display: block; }
@@ -249,22 +258,47 @@
 
   function slideIds(sessions) {
     if (Date.now() < browsingUntil) return [];
+    if (sessions.length === 1) return [sessions[0].id];
     if (sessions.some((s) => s.needsYou || s.state === 'working')) return [];
     return sessions.filter((s) => s.state === 'waiting').map((s) => s.id);
   }
 
+  function activityList(s, count, skip) {
+    const lines = s.activity.filter((a) => a !== skip).slice(0, count).map((a) => (a.startsWith('↳ ') ? `<li><span class="dim">▸ subagent:</span> ${esc(a.slice(2))}</li>` : `<li>${esc(a)}</li>`));
+    return lines.length ? `<ol>${lines.join('')}</ol>` : '';
+  }
+
+  function slideBody(s) {
+    if (s.question) return { label: 'Question', html: `<div>${esc(s.question.text)}</div>${s.question.options.length ? `<ol>${s.question.options.map((o) => `<li>${esc(o)}</li>`).join('')}</ol>` : ''}` };
+    if (s.state === 'needs_permission') {
+      const { request } = splitDetail(s);
+      const before = activityList(s, 6, request);
+      return { label: 'Wants to run', html: `<div>${esc(request ?? '')}</div>${before ? `<div class="label">Before that</div>${before}` : ''}` };
+    }
+    if (s.state === 'working') {
+      const tasks = s.todo ? `<div>Tasks: ${s.todo.done} of ${s.todo.total} done${s.todo.current ? ` · now: ${esc(s.todo.current)}` : ''}</div>` : '';
+      const subs = s.subagentList.map((a) => `<li>${esc(a.type ?? 'subagent')}: ${esc(a.description ?? '')} (${esc(STATE_TEXT[a.state] ?? a.state)})</li>`).join('');
+      return { label: 'Recent activity', html: `${tasks}${subs ? `<ol>${subs}</ol>` : ''}${activityList(s, 10)}` };
+    }
+    if (s.lastMessage) return { label: 'Last message', html: markdown(s.lastMessage), text: s.lastMessage };
+    return { label: 'Recent activity', html: activityList(s, 10) };
+  }
+
   function slide(s, ids) {
     const where = manyHosts ? shortHost(s.host) : '';
-    const meta = [`Done <span class="slide-ago" data-since="${s.since}">${ago(s.since)}</span> ago`, s.branch && esc(s.branch), s.folder && s.folder !== s.project && esc(s.folder), where && esc(where)].filter(Boolean).join(' · ');
-    const text = s.lastMessage ?? '';
+    const since = `<span class="slide-ago" data-since="${s.since}">${ago(s.since)}</span>`;
+    const lead = s.state === 'waiting' ? `Done ${since} ago` : `${esc(splitDetail(s).stateText)} · ${since}`;
+    const meta = [lead, s.branch && esc(s.branch), s.folder && s.folder !== s.project && esc(s.folder), where && esc(where)].filter(Boolean).join(' · ');
+    const body = slideBody(s);
+    const text = body.text ?? '';
     const size = text.length > 2200 ? ' longer' : text.length > 1400 ? ' long' : '';
     const hints = ['click for details', 'up or down for the board'];
     if (ids.length > 1) hints.unshift(`${ids.indexOf(s.id) + 1} of ${ids.length}`, 'left or right to step');
-    return `<div class="slide" data-id="${s.id}">
+    return `<div class="slide ${s.state}${s.needsYou ? ' needs' : ''}" data-id="${s.id}">
       ${s.character ? `<div class="avatar-slot" data-key="${esc(avatarKey(s))}"></div>` : `<div class="avatar" style="--hue:${hue(s.project)}">${esc(s.project[0]?.toUpperCase() ?? '?')}</div>`}
       <h2>${esc(s.project)}</h2>
       <div><div class="meta">${meta}</div><div class="gist">${esc(s.summary ?? '')}</div></div>
-      <div class="message md${size}">${markdown(text)}</div>
+      <div class="message md${size}"><div class="label">${body.label}</div>${body.html}</div>
       <div class="footer">${hints.join(' · ')}</div>
     </div>`;
   }
