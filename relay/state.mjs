@@ -14,6 +14,13 @@ const SUMMARY_EVERY_MS = 60e3;
 const LIVE_IDLE_AFTER_MS = 15e3;
 const SAVE_VERSION = 1;
 
+const OUTPUT_CHARS = 320;
+
+const tail = (text, max) => {
+  const flat = plain(text ?? '')?.replace(/\s+/g, ' ').trim() ?? '';
+  return flat.length > max ? `…${flat.slice(1 - max)}` : flat;
+};
+
 export const clip = (text, max) => {
   if (typeof text !== 'string') return null;
   const flat = text.replace(/\s+/g, ' ').trim();
@@ -505,6 +512,7 @@ export class Board {
         summary: s.summary ?? todo?.current ?? s.lastPrompt ?? clip(plain(s.lastMessage), 160),
         summarySource: s.summary ? 'summary' : todo?.current ? 'todo' : s.lastPrompt ? 'prompt' : s.lastMessage ? 'message' : null,
         lastMessage: s.lastMessage,
+        output: top.state === 'working' ? tail(s.recentText, OUTPUT_CHARS) : '',
         todo,
         subagents: subagents.length,
         subagentList: subagents.map((a) => ({ type: a.type, description: a.description, state: view(a).state })),

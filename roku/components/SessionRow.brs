@@ -21,7 +21,7 @@ sub init()
 
     m.activity = m.top.createChild("Group")
     m.lines = []
-    for i = 0 to 2
+    for i = 0 to 8
         line = MakeLabel(m.activity, 21, m.c.dim)
         line.width = 498
         m.lines.Push(line)
@@ -87,7 +87,9 @@ sub setAvatar(s as object, variant as string, size as integer, height as integer
         spec.loop = st.loop
     end if
     frame = size + 8
-    m.avatar.translation = [20 + (136 - frame) / 2, (height - frame) / 2]
+    avatarX = 20 + (136 - frame) / 2
+    if avatarX < 20 then avatarX = 20
+    m.avatar.translation = [avatarX, (height - frame) / 2]
     m.avatar.spec = spec
 end sub
 
@@ -95,8 +97,8 @@ sub onSession()
     s = m.top.session
     if s = invalid then return
     compact = m.top.compact
-    height = 152
-    if compact then height = 96
+    featured = m.top.featured
+    height = RowHeight(s.state, featured)
     variant = CardVariant(s)
     accent = AccentColor(variant)
 
@@ -108,6 +110,7 @@ sub onSession()
 
     avatarSize = 128
     if compact then avatarSize = 64
+    if featured then avatarSize = 192
     setAvatar(s, variant, avatarSize, height)
 
     parts = splitDetail(s)
@@ -149,12 +152,29 @@ sub onSession()
         end if
     else if compact
         setBody(m.body1, summary, 24, summaryColor, 1)
+    else if featured
+        setBody(m.body1, summary, 32, summaryColor, 2)
+        if AsText(s.output) <> ""
+            setBody(m.body2, AsText(s.output), 24, m.c.dim, 5)
+            m.body2.visible = true
+        else if type(s.todo) = "roAssociativeArray" and AsText(s.todo.current) <> "" and AsText(s.todo.current) <> summary
+            setBody(m.body2, "Now: " + AsText(s.todo.current), 24, m.c.dim, 2)
+            m.body2.visible = true
+        end if
     else
         setBody(m.body1, summary, 28, summaryColor, 2)
     end if
+    bodyWidth = 892
+    textLeft = 184
+    if featured
+        bodyWidth = 836
+        textLeft = 240
+    end if
+    m.body1.width = bodyWidth
+    m.body2.width = bodyWidth
     m.body1.visible = m.body1.text <> ""
     layoutLine1()
-    stack([m.line1, m.body1, m.body2], 184, height, 6)
+    stack([m.line1, m.body1, m.body2], textLeft, height, 6)
 
     tags = []
     if type(s.todo) = "roAssociativeArray" then tags.Push(AsText(s.todo.done) + "/" + AsText(s.todo.total) + " tasks")
@@ -168,7 +188,11 @@ sub onSession()
     limit = 3
     if tags.Count() > 0 then limit = 2
     if compact then limit = 1
-    for i = 0 to 2
+    if featured
+        limit = m.lines.Count()
+        if tags.Count() > 0 then limit = limit - 1
+    end if
+    for i = 0 to m.lines.Count() - 1
         line = m.lines[i]
         line.visible = false
         if i < limit and i < activity.Count()

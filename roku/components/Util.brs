@@ -70,6 +70,25 @@ function WaitingDetail(s as object) as string
     return detail
 end function
 
+function RowHeight(state as string, featured as boolean) as integer
+    if featured then return 320
+    if IsCompact(state) then return 96
+    return 152
+end function
+
+function PickFeatured(sessions as object) as string
+    if sessions.Count() < 2 then return ""
+    id = ""
+    for each s in sessions
+        if s.needsYou = true then return ""
+        if s.state = "working"
+            if id <> "" then return ""
+            id = s.id
+        end if
+    end for
+    return id
+end function
+
 function IsCompact(state as string) as boolean
     return state = "waiting" or state = "stale" or state = "ended"
 end function

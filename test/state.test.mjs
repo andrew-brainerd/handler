@@ -329,3 +329,19 @@ test('restore ignores a missing or unknown save', () => {
   assert.equal(board.restore({ version: 99, sessions: [{ id: 'x' }] }), 0);
   assert.equal(board.sessions.size, 0);
 });
+
+test('a working session carries the end of what the agent wrote', () => {
+  const board = new Board();
+  const card = () => board.snapshot(1_000_500).sessions[0];
+  board.apply({ ...base, hook_event_name: 'UserPromptSubmit', prompt: 'go' }, 1_000_000);
+  assert.equal(card().output, '');
+  board.apply({ ...base, hook_event_name: 'MessageDisplay', delta: 'Checking the **layout**\n\nnext ' }, 1_000_100);
+  board.apply({ ...base, hook_event_name: 'MessageDisplay', delta: 'x'.repeat(400) }, 1_000_200);
+  assert.equal(card().output.length, 320);
+  assert.ok(card().output.startsWith('…x'));
+  board.apply({ ...base, hook_event_name: 'UserPromptSubmit', prompt: 'again' }, 1_000_300);
+  board.apply({ ...base, hook_event_name: 'MessageDisplay', delta: 'Checking the **layout**\n\nnext' }, 1_000_400);
+  assert.equal(card().output, 'Checking the layout next');
+  board.apply({ ...base, hook_event_name: 'Stop', last_assistant_message: 'done' }, 1_000_450);
+  assert.equal(card().output, '');
+});

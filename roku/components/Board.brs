@@ -136,12 +136,12 @@ sub onStatus()
 end sub
 
 function fitRows(sessions as object, height as integer) as object
+    featuredId = PickFeatured(sessions)
     used = 0
     shown = []
     for i = 0 to sessions.Count() - 1
         s = sessions[i]
-        cost = 152
-        if IsCompact(s.state) then cost = 96
+        cost = RowHeight(s.state, s.id = featuredId)
         gap = 0
         if shown.Count() > 0 then gap = 16
         reserve = 0
@@ -156,6 +156,7 @@ end function
 sub render()
     sessions = m.status.sessions
     shown = fitRows(sessions, 872)
+    featuredId = PickFeatured(sessions)
     hosts = {}
     for each s in sessions
         hosts[ShortHost(s.host)] = true
@@ -177,6 +178,8 @@ sub render()
         compact = IsCompact(s.state)
         node.elapsed = ageOf(s.since)
         node.compact = compact
+        featured = id = featuredId
+        node.featured = featured
         s.where = ""
         if manyHosts then s.where = ShortHost(s.host)
         node.session = s
@@ -185,7 +188,7 @@ sub render()
         m.sinceById[id] = s.since
         keep[id] = true
         m.shownIds.Push(id)
-        if compact then y = y + 96 + 16 else y = y + 152 + 16
+        y = y + RowHeight(s.state, featured) + 16
     end for
     for each id in m.rowNodes.Keys()
         if not keep.DoesExist(id)
@@ -291,8 +294,7 @@ sub showFocus()
         return
     end if
     node = m.rowNodes[m.shownIds[m.focus]]
-    height = 152
-    if node.compact then height = 96
+    height = RowHeight(AsText(node.session.state), node.featured)
     m.focusRing.width = 1776 + 8
     m.focusRing.height = height + 8
     m.focusRing.translation = [node.translation[0] - 4, node.translation[1] - 4]

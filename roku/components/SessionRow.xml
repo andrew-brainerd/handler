@@ -3,6 +3,7 @@
   <interface>
     <field id="relayUrl" type="string" />
     <field id="compact" type="boolean" />
+    <field id="featured" type="boolean" />
     <field id="elapsed" type="integer" />
     <field id="session" type="assocarray" onChange="onSession" />
     <field id="ago" type="string" onChange="onAgo" />
