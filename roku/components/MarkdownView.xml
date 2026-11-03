@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<component name="MarkdownView" extends="Group">
+  <interface>
+    <field id="viewWidth" type="integer" value="1776" />
+    <field id="maxHeight" type="integer" value="540" />
+    <field id="size" type="integer" value="30" />
+    <field id="color" type="string" value="0xE8E6E1FF" />
+    <field id="markdown" type="string" onChange="render" />
+  </interface>
+
+  <script type="text/brightscript" uri="Util.brs" />
+  <script type="text/brightscript" uri="MarkdownView.brs" />
+</component>

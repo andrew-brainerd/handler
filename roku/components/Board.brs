@@ -331,13 +331,6 @@ sub addSection(title as string, text as string, lines = 1 as integer)
     addDetail(text, 30, m.c.text, lines)
 end sub
 
-function plainText(text as string) as string
-    text = CreateObject("roRegex", "\*\*([^*]+)\*\*", "").ReplaceAll(text, "\1")
-    text = CreateObject("roRegex", "`([^`]+)`", "").ReplaceAll(text, "\1")
-    text = CreateObject("roRegex", "(^|\n)\s*[-*]\s+", "").ReplaceAll(text, "\1• ")
-    return CreateObject("roRegex", "\n{3,}", "").ReplaceAll(text, Chr(10) + Chr(10))
-end function
-
 sub showDetail(id as string)
     s = findSession(id)
     if s = invalid
@@ -381,7 +374,19 @@ sub showDetail(id as string)
         end for
         addSection("Subagents", subs.Join(Chr(10)), 4)
     end if
-    if AsText(s.lastMessage) <> "" then addSection("Last message", plainText(AsText(s.lastMessage)), 8)
+    if AsText(s.lastMessage) <> ""
+        addDetail("LAST MESSAGE", 24, m.c.dim)
+        message = m.detailBody.createChild("MarkdownView")
+        message.viewWidth = 1728
+        room = 760
+        if type(s.activity) = "roArray" and s.activity.Count() > 0 then room = room - 40 - 35 * s.activity.Count()
+        if type(s.todo) = "roAssociativeArray" then room = room - 80
+        if type(s.subagentList) = "roArray" then room = room - 45 * s.subagentList.Count()
+        if room < 240 then room = 240
+        message.maxHeight = room
+        message.size = 28
+        message.markdown = AsText(s.lastMessage)
+    end if
     if type(s.activity) = "roArray" and s.activity.Count() > 0
         lines = []
         for each a in s.activity
@@ -522,6 +527,9 @@ sub buildSlide()
     m.slideBody.wrap = true
     m.slideBody.lineSpacing = 6
     m.slideBody.translation = [0, 290]
+    m.slideMarkdown = m.slide.createChild("MarkdownView")
+    m.slideMarkdown.translation = [0, 290]
+    m.slideMarkdown.visible = false
     m.slideFooter = MakeLabel(m.slide, 26, m.c.dim)
     m.slideFooter.width = 1776
     m.slideFooter.horizAlign = "center"
@@ -667,7 +675,7 @@ function slideContent(s as object) as object
         end if
         return { label: "RECENT ACTIVITY", text: text + activityText(s, 10) }
     end if
-    if AsText(s.lastMessage) <> "" then return { label: "LAST MESSAGE", text: plainText(AsText(s.lastMessage)) }
+    if AsText(s.lastMessage) <> "" then return { label: "LAST MESSAGE", text: AsText(s.lastMessage), markdown: true }
     return { label: "RECENT ACTIVITY", text: activityText(s, 10) }
 end function
 
@@ -689,6 +697,13 @@ sub showSlide()
     m.slideBody.color = m.c.text
     if s.needsYou = true then m.slideBody.color = m.c.request
     m.slideBody.text = body
+    isMarkdown = content.markdown = true
+    m.slideBody.visible = not isMarkdown
+    m.slideMarkdown.visible = isMarkdown
+    if isMarkdown
+        m.slideMarkdown.size = size
+        m.slideMarkdown.markdown = body
+    end if
     showSlideAgo()
 end sub
 

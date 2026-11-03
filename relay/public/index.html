@@ -31,9 +31,22 @@
   #banner .dot { flex: none; width: 20px; height: 20px; border-radius: 50%; background: var(--amber); box-shadow: 0 0 16px var(--amber); }
   #banner .text { overflow: hidden; text-overflow: ellipsis; }
   #banner .project { color: var(--amber); }
-  .md { color: var(--dim); white-space: pre-line; line-height: 1.45; }
-  .md b, .md code { color: var(--text); }
-  .md code { font-family: Consolas, monospace; font-size: .9em; }
+  .md { color: var(--dim); line-height: 1.4; }
+  .md b { color: var(--text); }
+  .md em { color: var(--text); font-style: italic; }
+  .md code { font-family: Consolas, monospace; font-size: .9em; color: var(--green); }
+  .md p { margin: 0 0 .5em; }
+  .md .md-h { color: var(--text); font-weight: 700; margin: .5em 0 .4em; line-height: 1.2; }
+  .md .md-h1 { font-size: 1.35em; }
+  .md .md-h2 { font-size: 1.2em; }
+  .md .md-h3 { font-size: 1.05em; }
+  .md .md-li { display: flex; gap: .6em; margin: 0 0 .2em calc(var(--depth) * 1.2em); }
+  .md .md-mark { flex-shrink: 0; min-width: .8em; }
+  .md pre { background: #171a1f; border-radius: 8px; padding: .5em .7em; margin: .3em 0 .6em; font-family: Consolas, monospace; font-size: .85em; color: var(--text); white-space: pre-wrap; }
+  .md blockquote { margin: 0 0 .3em; padding-left: .8em; border-left: 4px solid var(--line); }
+  .md hr { border: 0; border-top: 2px solid var(--line); margin: .6em 0; }
+  .md .md-row { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 1em; padding: .1em 0; }
+  .md .md-row.th { color: var(--text); font-weight: 700; border-bottom: 2px solid var(--line); margin-bottom: .2em; }
   #rows { flex: 1; display: flex; flex-direction: column; gap: 16px; min-height: 0; }
   .row { flex: 0 0 152px; background: var(--card); border: 2px solid var(--line); border-radius: 20px; padding: 16px 28px 16px 20px; display: grid; grid-template-columns: 104px minmax(0, 1fr) 520px 96px; column-gap: 28px; align-items: center; position: relative; overflow: hidden; cursor: pointer; }
   .row::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 8px; background: var(--accent, var(--grey)); }
@@ -89,6 +102,7 @@
   .slide .message { grid-column: 1 / -1; border-top: 2px solid var(--line); margin-top: 28px; padding-top: 28px; font-size: 32px; color: var(--text); overflow: hidden; min-height: 0; }
   .slide .message.long { font-size: 28px; }
   .slide .message.longer { font-size: 24px; }
+  .slide .message.clipped { -webkit-mask-image: linear-gradient(#000 88%, transparent); mask-image: linear-gradient(#000 88%, transparent); }
   .slide .message .label { margin: 0 0 14px; font-size: 24px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--dim); }
   .slide .message ol { list-style: disc; margin: 14px 0 0; padding-left: 36px; }
   .slide .message div + .label { margin-top: 24px; }
@@ -319,6 +333,14 @@
     </div>`;
   }
 
+  function fitSlideMessage() {
+    const message = document.querySelector('.slide .message');
+    if (!message) return;
+    const over = () => message.scrollHeight > message.clientHeight + 1;
+    for (const size of ['long', 'longer']) if (over()) message.classList.add(size);
+    message.classList.toggle('clipped', over());
+  }
+
   function stepSlide(delta) {
     const ids = slideIds(status.sessions);
     if (ids.length < 2) return;
@@ -331,12 +353,68 @@
     slideTimer = setInterval(() => stepSlide(1), SLIDE_MS);
   }
 
-  function markdown(text) {
+  function inlineMarkdown(text) {
     return esc(text)
-      .replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>')
+      .replace(/\[([^\]]+)\]\([^)\s]+\)/g, '$1')
       .replace(/`([^`]+)`/g, '<code>$1</code>')
-      .replace(/^\s*[-*]\s+/gm, '• ')
-      .replace(/\n{3,}/g, '\n\n');
+      .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
+      .replace(/__(.+?)__/g, '<b>$1</b>')
+      .replace(/(^|[^*\w])\*([^*\s][^*]*?)\*/g, '$1<em>$2</em>');
+  }
+
+  function markdown(text) {
+    const out = [];
+    let para = [];
+    let code = null;
+    const flush = () => {
+      if (para.length) out.push(`<p>${inlineMarkdown(para.join(' '))}</p>`);
+      para = [];
+    };
+    const cells = (line) => line.trim().replace(/^\||\|$/g, '').split('|').map((c) => inlineMarkdown(c.trim()));
+    const isRule = (line) => /^\s*\|[\s:|-]+\|\s*$/.test(line ?? '');
+    const lines = String(text).split(/\r?\n/);
+    lines.forEach((line, i) => {
+      if (/^\s*```/.test(line)) {
+        if (code) {
+          out.push(`<pre>${esc(code.join('\n'))}</pre>`);
+          code = null;
+        } else {
+          flush();
+          code = [];
+        }
+        return;
+      }
+      if (code) return void code.push(line);
+      const heading = /^(#{1,6})\s+(.*)$/.exec(line);
+      const item = /^(\s*)([-*+]|\d+[.)])\s+(.*)$/.exec(line);
+      const quote = /^\s*>\s?(.*)$/.exec(line);
+      if (heading) {
+        flush();
+        out.push(`<div class="md-h md-h${Math.min(heading[1].length, 3)}">${inlineMarkdown(heading[2])}</div>`);
+      } else if (/^\s*(-{3,}|\*{3,}|_{3,})\s*$/.test(line)) {
+        flush();
+        out.push('<hr>');
+      } else if (item) {
+        flush();
+        const mark = /[-*+]/.test(item[2]) ? '•' : esc(item[2]);
+        out.push(`<div class="md-li" style="--depth:${Math.min(Math.floor(item[1].length / 2), 3)}"><span class="md-mark">${mark}</span><span>${inlineMarkdown(item[3])}</span></div>`);
+      } else if (quote) {
+        flush();
+        out.push(`<blockquote>${inlineMarkdown(quote[1])}</blockquote>`);
+      } else if (/^\s*\|.*\|\s*$/.test(line)) {
+        flush();
+        if (isRule(line)) return;
+        const tag = isRule(lines[i + 1]) ? 'th' : 'td';
+        out.push(`<div class="md-row ${tag}">${cells(line).map((c) => `<span>${c}</span>`).join('')}</div>`);
+      } else if (line.trim() === '') {
+        flush();
+      } else {
+        para.push(line.trim());
+      }
+    });
+    flush();
+    if (code) out.push(`<pre>${esc(code.join('\n'))}</pre>`);
+    return out.join('');
   }
 
   function chime() {
@@ -404,6 +482,7 @@
       ? shown.map((s) => row(s, s.id === featuredId(sessions))).join('') + (shown.length < sessions.length ? `<div class="more">+${sessions.length - shown.length} more</div>` : '')
       : '<div class="empty">No agents running</div>';
     mountAvatars(sessions);
+    fitSlideMessage();
     const needs = sessions.filter((s) => s.needsYou).length;
     const working = sessions.filter((s) => s.state === 'working').length;
     const waiting = sessions.filter((s) => s.state === 'waiting').length;
