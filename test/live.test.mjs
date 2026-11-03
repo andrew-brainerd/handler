@@ -23,8 +23,10 @@ test('readLive keeps interactive sessions whose process is alive', () =>
     writeFileSync(join(dir, '1.json'), entry('open', 1));
     writeFileSync(join(dir, '2.json'), entry('dead', 999));
     writeFileSync(join(dir, '3.json'), entry('script', 3, { kind: 'print' }));
+    writeFileSync(join(dir, '4.json'), entry('summary', 4, { entrypoint: 'sdk-cli' }));
+    writeFileSync(join(dir, '5.json'), entry('terminal', 5, { entrypoint: 'cli' }));
     writeFileSync(join(dir, '1.abc.key'), 'not json');
-    assert.deepEqual(readLive(dir, { alive, host: 'mac' }).map((l) => [l.id, l.host]), [['open', 'mac']]);
+    assert.deepEqual(readLive(dir, { alive, host: 'mac' }).map((l) => [l.id, l.host]), [['open', 'mac'], ['terminal', 'mac']]);
   }));
 
 test('readLive: a missing folder is no sessions, a half-written file skips the round', () =>

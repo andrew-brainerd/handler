@@ -31,7 +31,7 @@ export function readLive(dir, { host = null, alive = pidAlive } = {}) {
         if (err.code === 'ENOENT') continue;
         throw err;
       }
-      if (entry.kind !== 'interactive' || !entry.sessionId || !Number.isInteger(entry.pid) || !alive(entry.pid)) continue;
+      if (entry.kind !== 'interactive' || entry.entrypoint?.startsWith('sdk') || !entry.sessionId || !Number.isInteger(entry.pid) || !alive(entry.pid)) continue;
       live.push({ id: entry.sessionId, cwd: entry.cwd ?? null, status: entry.status ?? null, startedAt: entry.startedAt, updatedAt: entry.updatedAt, host });
     }
   } catch {
