@@ -81,6 +81,12 @@ sub init()
 end sub
 
 sub onRelayUrl()
+    if m.task <> invalid
+        m.task.unobserveField("status")
+        m.task.control = "stop"
+        m.rows.removeChildrenIndex(m.rows.getChildCount(), 0)
+        m.rowNodes = {}
+    end if
     m.task = CreateObject("roSGNode", "StatusTask")
     m.task.url = m.top.relayUrl + "/status"
     m.task.observeField("status", "onStatus")

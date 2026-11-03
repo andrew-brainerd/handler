@@ -15,7 +15,49 @@ function show(name) {
   page = name;
   for (const el of document.querySelectorAll('.tab')) el.classList.toggle('on', el.dataset.page === name);
   for (const el of document.querySelectorAll('.page')) el.classList.toggle('on', el.id === name);
-  if (name === 'settings') refresh();
+  if (name === 'settings') {
+    refresh();
+    search();
+  }
+}
+
+function rokuList() {
+  return form.elements.rokuIps.value.split(/[\s,]+/).filter(Boolean);
+}
+
+function line(text) {
+  const el = document.createElement('span');
+  el.className = 'dim';
+  el.textContent = text;
+  return el;
+}
+
+function showRokus({ rokus }) {
+  const box = $('found-rokus');
+  box.replaceChildren();
+  if (!rokus.length) box.append(line('No TVs found yet.'));
+  for (const tv of rokus) {
+    const label = document.createElement('label');
+    label.className = 'check';
+    const tick = document.createElement('input');
+    tick.type = 'checkbox';
+    tick.checked = rokuList().includes(tv.ip);
+    tick.addEventListener('change', () => {
+      const rest = rokuList().filter((ip) => ip !== tv.ip);
+      form.elements.rokuIps.value = (tick.checked ? [...rest, tv.ip] : rest).join(', ');
+    });
+    label.append(tick, ` ${tv.name}${tv.model ? ` (${tv.model})` : ''}, ${tv.ip}`);
+    box.append(label);
+  }
+}
+
+async function search() {
+  $('found-rokus').replaceChildren(line('Searching…'));
+  try {
+    showRokus(await invoke('discover'));
+  } catch {
+    $('found-rokus').replaceChildren(line('The relay needs to be running to search.'));
+  }
 }
 
 function fill(settings) {
@@ -140,6 +182,7 @@ async function poll() {
 
 for (const el of document.querySelectorAll('.tab')) el.addEventListener('click', () => show(el.dataset.page));
 for (const el of form.elements.role) el.addEventListener('change', roleChanged);
+$('search').addEventListener('click', search);
 $('main-select').addEventListener('change', (e) => {
   picked = e.target.value;
   roleChanged();

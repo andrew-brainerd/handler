@@ -1,48 +1,13 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import dgram from 'node:dgram';
 import os from 'node:os';
 import { execFileSync } from 'node:child_process';
 import { zipSync } from 'fflate';
+import { deviceInfo, findRokuIps, localAddressFor } from '../relay/discovery.mjs';
 
-export function discover(timeoutMs = 3000) {
-  return new Promise((resolve) => {
-    const found = new Map();
-    const socket = dgram.createSocket('udp4');
-    const search = [
-      'M-SEARCH * HTTP/1.1',
-      'HOST: 239.255.255.250:1900',
-      'MAN: "ssdp:discover"',
-      'ST: roku:ecp',
-      'MX: 2',
-      '',
-      '',
-    ].join('\r\n');
-    socket.on('message', (msg, rinfo) => {
-      if (/roku:ecp/i.test(msg.toString())) found.set(rinfo.address, true);
-    });
-    socket.bind(() => socket.send(search, 1900, '239.255.255.250'));
-    setTimeout(() => {
-      socket.close();
-      resolve([...found.keys()]);
-    }, timeoutMs);
-  });
-}
+export { deviceInfo, localAddressFor };
 
-export async function deviceInfo(ip, timeoutMs = 2000) {
-  try {
-    const xml = await (await fetch(`http://${ip}:8060/query/device-info`, { signal: AbortSignal.timeout(timeoutMs) })).text();
-    const pick = (tag) => xml.match(new RegExp(`<${tag}>([^<]*)</${tag}>`))?.[1];
-    return {
-      ip,
-      name: pick('user-device-name') || pick('friendly-device-name') || pick('model-name') || 'Roku',
-      devMode: pick('developer-enabled') === 'true',
-      keyedDevId: pick('keyed-developer-id') || null,
-    };
-  } catch {
-    return null;
-  }
-}
+export const discover = findRokuIps;
 
 export async function deviceName(ip) {
   return (await deviceInfo(ip))?.name ?? 'Roku';
@@ -87,20 +52,6 @@ export async function resolveRoku(target) {
   const list = found.map((d) => `  ${d.ip}  ${d.name}${d.devMode ? '' : '  (developer mode off)'}`).join('\n');
   if (!found.length) throw new Error('No Roku found on the network. Pass --roku <ip> (Settings > Network > About on the TV).');
   throw new Error(`${target ? `No Roku named "${target}".` : 'Pick a Roku with --roku <ip or name>.'}\n${list}`);
-}
-
-export function localAddressFor(rokuIp) {
-  const target = toInt(rokuIp);
-  let fallback;
-  for (const addrs of Object.values(os.networkInterfaces())) {
-    for (const a of addrs ?? []) {
-      if (a.family !== 'IPv4' || a.internal) continue;
-      const mask = toInt(a.netmask);
-      if (((toInt(a.address) & mask) >>> 0) === ((target & mask) >>> 0)) return a.address;
-      fallback ??= a.address;
-    }
-  }
-  return fallback;
 }
 
 export function devCurl(ip, password, path, extraArgs) {

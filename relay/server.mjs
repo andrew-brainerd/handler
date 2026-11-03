@@ -12,7 +12,7 @@ import { isQuiet, parseQuiet } from './quiet.mjs';
 import { WarpTabs, warpDatabase } from './warp.mjs';
 import { readBoard, writeBoard } from './store.mjs';
 import { liveDir, readLive } from './live.mjs';
-import { isLocal, startDiscovery } from './discovery.mjs';
+import { Mains, deviceInfo, findRokuIps, isLocal, localAddressFor, startDiscovery } from './discovery.mjs';
 
 const { values: args } = parseArgs({
   options: {
@@ -24,6 +24,7 @@ const { values: args } = parseArgs({
     'forward-host': { type: 'string', default: process.env.HANDLER_FORWARD_HOST ?? '' },
     name: { type: 'string', default: hostname() },
     'discovery-port': { type: 'string', default: '' },
+    'no-discovery': { type: 'boolean', default: false },
     data: { type: 'string', default: process.env.HANDLER_DATA ?? '' },
     parent: { type: 'string', default: '' },
     quiet: { type: 'string', default: process.env.HANDLER_QUIET ?? '' },
@@ -37,6 +38,7 @@ const rokus = args.roku.split(',').map((ip) => ip.trim()).filter(Boolean);
 const MAX_BODY = 1024 * 1024;
 const SWEEP_MS = 2000;
 const BROADCAST_DELAY_MS = 150;
+const ROKU_PUSH_MS = 30000;
 
 function locate(cwd) {
   for (let dir = cwd; ; dir = dirname(dir)) {
@@ -89,7 +91,7 @@ const forwarder =
     ? new Forwarder({ url: args.forward || null, host: args.name, snapshot: () => board.snapshot(), log })
     : null;
 
-const mains = startDiscovery({
+const mains = args['no-discovery'] ? new Mains(args.name) : startDiscovery({
   name: args.name,
   port: Number(args.port),
   isMain: !forwarder,
@@ -100,6 +102,22 @@ const mains = startDiscovery({
     if (forwarder.point(`http://${main.address}:${main.port}`)) forwarder.send();
   },
 });
+
+async function pushRelayUrl(ip) {
+  try {
+    const active = await (await fetch(`http://${ip}:8060/query/active-app`, { signal: AbortSignal.timeout(2000) })).text();
+    if (!/<(app|screensaver) id="dev"/.test(active)) return;
+    const url = `http://${localAddressFor(ip)}:${args.port}`;
+    await fetch(`http://${ip}:8060/input?handler=relay&url=${encodeURIComponent(url)}`, { method: 'POST', signal: AbortSignal.timeout(2000) });
+  } catch (err) {
+    if (args.verbose) log(`roku ${ip} relay push failed: ${err.message}`);
+  }
+}
+
+async function findRokus() {
+  const ips = await findRokuIps();
+  return (await Promise.all(ips.map((ip) => deviceInfo(ip)))).filter(Boolean).map(({ ip, name, model, serial }) => ({ ip, name, model, serial }));
+}
 
 function status() {
   const snap = board.snapshot();
@@ -112,6 +130,8 @@ function status() {
 
 const SAFE_NAME = /^[\w-]+$/;
 const SAFE_FILE = /^[\w-]+\.(png|json)$/;
+
+const isLoopback = (address = '') => /^(::1|127\.|::ffff:127\.)/.test(address);
 
 const clients = new Set();
 let broadcastTimer = null;
@@ -236,6 +256,11 @@ const server = createServer(async (req, res) => {
       res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
       return res.end(JSON.stringify(peers.hosts()));
     }
+    if (req.method === 'GET' && url.pathname === '/discover') {
+      if (!isLoopback(req.socket.remoteAddress)) return res.writeHead(403).end();
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+      return res.end(JSON.stringify({ rokus: await findRokus() }));
+    }
     if (req.method === 'GET' && url.pathname === '/mains') {
       res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'Access-Control-Allow-Origin': '*' });
       return res.end(
@@ -344,6 +369,12 @@ if (args.parent) {
       }
     }
   }, 3000);
+}
+
+if (!forwarder && rokus.length) {
+  const pushAll = () => rokus.forEach(pushRelayUrl);
+  setInterval(pushAll, ROKU_PUSH_MS);
+  pushAll();
 }
 
 server.listen(Number(args.port), '0.0.0.0', () => log(`Handler relay on http://localhost:${args.port}/`));

@@ -97,6 +97,14 @@ fn hooks(relay: tauri::State<Relay>, install: bool) -> Result<String, String> {
     if out.status.success() { Ok(text) } else { Err(text) }
 }
 
+#[tauri::command(async)]
+fn discover(relay: tauri::State<Relay>) -> Result<serde_json::Value, String> {
+    let url = format!("{}/discover", relay.settings().relay_url());
+    let agent = ureq::AgentBuilder::new().timeout(std::time::Duration::from_secs(8)).build();
+    let text = agent.get(&url).call().map_err(|e| e.to_string())?.into_string().map_err(|e| e.to_string())?;
+    serde_json::from_str(&text).map_err(|e| e.to_string())
+}
+
 fn reveal(app: &AppHandle, page: &str) {
     if let Some(window) = app.get_webview_window("main") {
         let _ = window.emit("show-page", page);
@@ -176,7 +184,7 @@ pub fn run() {
             Some(vec![BACKGROUND_ARG]),
         ))
         .plugin(tauri_plugin_notification::init())
-        .invoke_handler(tauri::generate_handler![state, save_settings, restart_relay, hooks])
+        .invoke_handler(tauri::generate_handler![state, save_settings, restart_relay, hooks, discover])
         .setup(|app| {
             let handle = app.handle();
             let saved = settings::load(handle);

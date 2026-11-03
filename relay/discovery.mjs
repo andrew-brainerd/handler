@@ -98,3 +98,73 @@ export function startDiscovery({ name, port, isMain, onMain = () => {}, log = ()
   });
   return mains;
 }
+
+export function lanAddresses(nets = networkInterfaces()) {
+  return Object.values(nets)
+    .flat()
+    .filter((a) => a && a.family === 'IPv4' && !a.internal)
+    .map((a) => a.address);
+}
+
+export function findRokuIps(timeoutMs = 3000, addresses = lanAddresses()) {
+  return new Promise((resolve) => {
+    const found = new Set();
+    const socket = dgram.createSocket('udp4');
+    const search = ['M-SEARCH * HTTP/1.1', 'HOST: 239.255.255.250:1900', 'MAN: "ssdp:discover"', 'ST: roku:ecp', 'MX: 2', '', ''].join('\r\n');
+    socket.on('error', () => {});
+    socket.on('message', (msg, from) => {
+      if (/roku:ecp/i.test(msg.toString())) found.add(from.address);
+    });
+    socket.bind(async () => {
+      for (const address of addresses) {
+        try {
+          socket.setMulticastInterface(address);
+          await new Promise((done) => socket.send(search, 1900, '239.255.255.250', done));
+        } catch {}
+      }
+    });
+    setTimeout(() => {
+      socket.close();
+      resolve([...found]);
+    }, timeoutMs);
+  });
+}
+
+export function parseDeviceInfo(ip, xml) {
+  const pick = (tag) => xml.match(new RegExp(`<${tag}>([^<]*)</${tag}>`))?.[1];
+  return {
+    ip,
+    name: pick('user-device-name') || pick('friendly-device-name') || pick('model-name') || 'Roku',
+    model: pick('model-name') || null,
+    serial: pick('serial-number') || null,
+    devMode: pick('developer-enabled') === 'true',
+    keyedDevId: pick('keyed-developer-id') || null,
+  };
+}
+
+export async function deviceInfo(ip, timeoutMs = 2000) {
+  try {
+    const res = await fetch(`http://${ip}:8060/query/device-info`, { signal: AbortSignal.timeout(timeoutMs) });
+    return parseDeviceInfo(ip, await res.text());
+  } catch {
+    return null;
+  }
+}
+
+function toInt(ip) {
+  return ip.split('.').reduce((n, part) => (n << 8) + Number(part), 0) >>> 0;
+}
+
+export function localAddressFor(targetIp, nets = networkInterfaces()) {
+  const target = toInt(targetIp);
+  let fallback;
+  for (const addrs of Object.values(nets)) {
+    for (const a of addrs ?? []) {
+      if (a.family !== 'IPv4' || a.internal) continue;
+      const mask = toInt(a.netmask);
+      if (((toInt(a.address) & mask) >>> 0) === ((target & mask) >>> 0)) return a.address;
+      fallback ??= a.address;
+    }
+  }
+  return fallback;
+}

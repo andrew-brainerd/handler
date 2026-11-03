@@ -39,7 +39,9 @@
       </label>
       <label class="field" id="roku-field">Roku TVs to alert
         <input name="rokuIps" placeholder="192.168.4.46" spellcheck="false">
-        <span class="hint">IP addresses, separated by commas. Leave empty for none.</span>
+        <span class="hint">Tick the TVs found below, or type IP addresses separated by commas. Leave empty for none.</span>
+        <span id="found-rokus" class="found"></span>
+        <button type="button" id="search">Search for TVs again</button>
       </label>
 
       <label class="field">Quiet hours
