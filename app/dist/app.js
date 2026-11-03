@@ -6,6 +6,10 @@ const form = $('form');
 let view = null;
 let page = 'board';
 let up = null;
+let mains = { mains: [], forwarding: null };
+let picked = '';
+
+const ADDRESS = '__address__';
 
 function show(name) {
   page = name;
@@ -21,6 +25,8 @@ function fill(settings) {
     else if (el.type === 'checkbox') el.checked = settings[el.name];
     else el.value = settings[el.name];
   }
+  picked = settings.forwardUrl ? ADDRESS : settings.forwardHost;
+  renderMains();
   roleChanged();
 }
 
@@ -28,8 +34,9 @@ function read() {
   const data = new FormData(form);
   return {
     role: data.get('role') ?? 'main',
-    forwardUrl: data.get('forwardUrl').trim(),
-    port: Number(data.get('port')),
+    forwardUrl: picked === ADDRESS ? data.get('forwardUrl').trim() : '',
+    forwardHost: picked === ADDRESS ? '' : picked,
+    port: view.settings.port,
     summaries: form.elements.summaries.checked,
     rokuIps: data.get('rokuIps').trim(),
     quietHours: data.get('quietHours').trim(),
@@ -43,7 +50,47 @@ function read() {
 function roleChanged() {
   const forward = form.elements.role.value === 'forward';
   $('forward-field').hidden = !forward;
+  $('address-field').hidden = !forward || picked !== ADDRESS;
   $('roku-field').hidden = forward;
+}
+
+function renderMains() {
+  if (!picked && mains.mains.length === 1) picked = mains.mains[0].host;
+  const found = mains.mains.map((m) => [m.host, `${m.host} (${m.address})`]);
+  const missing = picked && picked !== ADDRESS && !mains.mains.some((m) => m.host === picked);
+  const options = [
+    ...(picked ? [] : [['', 'Looking for main relays…']]),
+    ...found,
+    ...(missing ? [[picked, `${picked} (not found right now)`]] : []),
+    [ADDRESS, 'Enter an address…'],
+  ];
+  const select = $('main-select');
+  const signature = JSON.stringify(options);
+  if (select.dataset.signature !== signature) {
+    select.dataset.signature = signature;
+    select.replaceChildren(...options.map(([value, label]) => new Option(label, value)));
+  }
+  select.value = picked;
+  $('main-hint').textContent =
+    picked === ADDRESS
+      ? ''
+      : found.length
+        ? 'Found on this network. Sessions here are sent to the relay you pick, so save only if you recognise it.'
+        : "Handler needs to be running on the other computer, set to Main, with this version or newer.";
+}
+
+async function pollMains() {
+  try {
+    const res = await fetch(`${view.relayUrl}/mains`, { cache: 'no-store' });
+    if (res.ok) mains = await res.json();
+  } catch {}
+  renderMains();
+}
+
+function forwardingLabel() {
+  const { forwardHost, forwardUrl } = view.settings;
+  const target = forwardUrl || forwardHost;
+  return mains.forwarding?.ok === false || (forwardHost && !forwardUrl && !mains.forwarding?.url) ? `Can't reach ${target}` : `Forwarding to ${target}`;
 }
 
 function render(next) {
@@ -74,6 +121,7 @@ async function poll() {
     if (res.ok) status = await res.json();
   } catch {}
   const nowUp = !!status;
+  await pollMains();
   if (nowUp && up === false) $('frame').src = `${view.relayUrl}/`;
   up = nowUp;
   $('down').hidden = nowUp;
@@ -86,12 +134,16 @@ async function poll() {
   state.className = `relay-state ${nowUp ? '' : 'bad'}`;
   state.textContent = !nowUp
     ? 'Relay not answering'
-    : `${view.settings.role === 'forward' ? `Forwarding to ${view.settings.forwardUrl} · ` : ''}${sessions.length} session${sessions.length === 1 ? '' : 's'}`;
+    : `${view.settings.role === 'forward' ? `${forwardingLabel()} · ` : ''}${sessions.length} session${sessions.length === 1 ? '' : 's'}`;
   if (!nowUp || page === 'settings') refresh();
 }
 
 for (const el of document.querySelectorAll('.tab')) el.addEventListener('click', () => show(el.dataset.page));
 for (const el of form.elements.role) el.addEventListener('change', roleChanged);
+$('main-select').addEventListener('change', (e) => {
+  picked = e.target.value;
+  roleChanged();
+});
 
 form.addEventListener('submit', async (e) => {
   e.preventDefault();

@@ -38,7 +38,7 @@ export class Peers {
 
 export class Forwarder {
   constructor({ url, host, snapshot, log = () => {}, fetchImpl = fetch }) {
-    this.url = url.replace(/\/+$/, '') + '/peer';
+    this.point(url);
     this.host = host;
     this.snapshot = snapshot;
     this.log = log;
@@ -48,7 +48,16 @@ export class Forwarder {
     this.ok = null;
   }
 
+  point(url) {
+    const next = url ? url.replace(/\/+$/, '') + '/peer' : null;
+    if (next === this.url) return false;
+    this.url = next;
+    this.ok = null;
+    return true;
+  }
+
   async send() {
+    if (!this.url) return;
     if (this.sending) return void (this.again = true);
     this.sending = true;
     try {

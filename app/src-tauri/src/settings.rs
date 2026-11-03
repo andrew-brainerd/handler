@@ -3,11 +3,14 @@ use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager};
 
+const DEFAULT_PORT: u16 = 8790;
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct Settings {
     pub role: Role,
     pub forward_url: String,
+    pub forward_host: String,
     pub port: u16,
     pub summaries: bool,
     pub roku_ips: String,
@@ -30,7 +33,8 @@ impl Default for Settings {
         Self {
             role: Role::Main,
             forward_url: String::new(),
-            port: 8790,
+            forward_host: String::new(),
+            port: DEFAULT_PORT,
             summaries: true,
             roku_ips: String::new(),
             quiet_hours: String::new(),
@@ -57,15 +61,27 @@ impl Settings {
             args.push("--quiet".to_owned());
             args.push(self.quiet_hours.trim().to_owned());
         }
-        if self.role == Role::Forward && !self.forward_url.trim().is_empty() {
-            args.push("--forward".to_owned());
-            args.push(self.forward_url.trim().to_owned());
+        if self.role == Role::Forward {
+            let url = normalize_url(&self.forward_url);
+            if !url.is_empty() {
+                args.push("--forward".to_owned());
+                args.push(url);
+            } else if !self.forward_host.trim().is_empty() {
+                args.push("--forward-host".to_owned());
+                args.push(self.forward_host.trim().to_owned());
+            }
         }
         args
     }
 
     pub fn relay_url(&self) -> String {
         format!("http://127.0.0.1:{}", self.port)
+    }
+
+    pub fn normalized(mut self) -> Self {
+        self.forward_url = normalize_url(&self.forward_url);
+        self.forward_host = self.forward_host.trim().to_owned();
+        self
     }
 
     pub fn validate(&self) -> Result<(), String> {
@@ -77,12 +93,27 @@ impl Settings {
         }
         if self.role == Role::Forward {
             let url = self.forward_url.trim();
-            if !(url.starts_with("http://") || url.starts_with("https://")) {
-                return Err("The main relay address should start with http://".into());
+            if url.is_empty() && self.forward_host.trim().is_empty() {
+                return Err("Pick a main relay, or enter its address".into());
+            }
+            if url.contains(char::is_whitespace) {
+                return Err("The main relay address can't contain spaces".into());
             }
         }
         Ok(())
     }
+}
+
+fn normalize_url(input: &str) -> String {
+    let text = input.trim().trim_end_matches('/');
+    if text.is_empty() {
+        return String::new();
+    }
+    let (scheme, rest) = text.split_once("://").unwrap_or(("http", text));
+    if scheme == "http" && !rest.contains(':') {
+        return format!("http://{rest}:{DEFAULT_PORT}");
+    }
+    format!("{scheme}://{rest}")
 }
 
 fn valid_quiet(text: &str) -> bool {
@@ -156,8 +187,32 @@ mod tests {
     }
 
     #[test]
-    fn forward_needs_a_url() {
+    fn forward_needs_a_main_relay() {
         let s = Settings { role: Role::Forward, ..Settings::default() };
         assert!(s.validate().is_err());
+        assert!(Settings { forward_host: "PC".into(), ..s.clone() }.validate().is_ok());
+        assert!(Settings { forward_url: "192.168.4.55".into(), ..s.clone() }.validate().is_ok());
+        assert!(Settings { forward_url: "my pc".into(), ..s }.validate().is_err());
+    }
+
+    #[test]
+    fn addresses_fill_in_what_is_missing() {
+        assert_eq!(normalize_url(" 192.168.4.55 "), "http://192.168.4.55:8790");
+        assert_eq!(normalize_url("http://192.168.4.55"), "http://192.168.4.55:8790");
+        assert_eq!(normalize_url("http://192.168.4.55/"), "http://192.168.4.55:8790");
+        assert_eq!(normalize_url("192.168.4.55:9000"), "http://192.168.4.55:9000");
+        assert_eq!(normalize_url("http://pc:9000"), "http://pc:9000");
+        assert_eq!(normalize_url("https://relay.example"), "https://relay.example");
+        assert_eq!(normalize_url("  "), "");
+    }
+
+    #[test]
+    fn a_picked_main_is_followed_by_name_and_an_address_wins() {
+        let s = Settings { role: Role::Forward, forward_host: "PC".into(), ..Settings::default() };
+        assert!(s.relay_args().ends_with(&["--forward-host".to_owned(), "PC".to_owned()]));
+        let s = Settings { forward_url: "10.0.0.2".into(), ..s };
+        assert!(s.relay_args().ends_with(&["--forward".to_owned(), "http://10.0.0.2:8790".to_owned()]));
+        let main = Settings { role: Role::Main, ..s };
+        assert!(!main.relay_args().iter().any(|a| a.starts_with("--forward")));
     }
 }

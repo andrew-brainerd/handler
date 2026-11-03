@@ -29,12 +29,13 @@
         <label><input type="radio" name="role" value="main"> <b>Main</b> <span class="dim">This computer shows the board and drives the TVs.</span></label>
         <label><input type="radio" name="role" value="forward"> <b>Forward to the main relay</b> <span class="dim">Sessions here appear on another computer's board.</span></label>
       </fieldset>
-      <label class="field" id="forward-field">Main relay address
-        <input name="forwardUrl" placeholder="http://192.168.4.55:8790" spellcheck="false">
+      <label class="field" id="forward-field">Main relay
+        <select id="main-select"></select>
+        <span class="hint" id="main-hint"></span>
       </label>
-      <label class="field">Port
-        <input name="port" type="number" min="1024" max="65535">
-        <span class="hint">The hooks post to port 8790, so change this only if they do too.</span>
+      <label class="field" id="address-field">Address
+        <input name="forwardUrl" placeholder="192.168.4.55" spellcheck="false">
+        <span class="hint">Only needed if the other computer isn't found. The port is optional.</span>
       </label>
       <label class="field" id="roku-field">Roku TVs to alert
         <input name="rokuIps" placeholder="192.168.4.46" spellcheck="false">

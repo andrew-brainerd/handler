@@ -11,6 +11,7 @@ const QUIET_WATCH_MS = 30e3;
 const ACTIVITY_KEEP = 20;
 const DONE = 'Done, waiting for you';
 const SUMMARY_EVERY_MS = 60e3;
+const LIVE_IDLE_AFTER_MS = 15e3;
 const SAVE_VERSION = 1;
 
 export const clip = (text, max) => {
@@ -389,12 +390,56 @@ export class Board {
       const expired =
         (s.ended && now - s.ended > ENDED_KEEP_MS) ||
         (!s.visible && now - s.lastEvent > HIDDEN_EXPIRE_MS) ||
-        ((state === 'waiting' || state === 'stale') && now - s.lastEvent > IDLE_EXPIRE_MS);
+        (!s.live && (state === 'waiting' || state === 'stale') && now - s.lastEvent > IDLE_EXPIRE_MS);
       if (expired) {
         this.sessions.delete(id);
         changed = true;
       } else if (s.lastState !== state) {
         s.lastState = state;
+        changed = true;
+      }
+    }
+    if (changed) this.seq++;
+    return changed;
+  }
+
+  syncLive(list, now = Date.now()) {
+    if (!list) return false;
+    let changed = false;
+    const ids = new Set(list.map((l) => l.id));
+    for (const s of this.sessions.values()) {
+      if (!s.live || ids.has(s.id)) continue;
+      s.live = false;
+      changed = true;
+      if (s.ended) continue;
+      s.ended = now;
+      for (const a of s.agents.values()) clearAll(a);
+      setBase(s.agents.get('main'), 'ended', now);
+    }
+    for (const l of list) {
+      let s = this.sessions.get(l.id);
+      if (!s) {
+        s = this.#newSession({ session_id: l.id, host: l.host }, now);
+        s.started = l.startedAt ?? now;
+        s.lastEvent = l.updatedAt ?? now;
+        if (l.cwd) {
+          s.cwd = l.cwd;
+          Object.assign(s, this.locate(l.cwd));
+        }
+        if (l.status === 'busy') setBase(s.agents.get('main'), 'working', s.lastEvent);
+        this.sessions.set(l.id, s);
+        changed = true;
+      }
+      if (s.ended) continue;
+      s.live = true;
+      if (!s.visible) {
+        s.visible = true;
+        changed = true;
+      }
+      const main = s.agents.get('main');
+      if (l.status === 'idle' && main.base === 'working' && main.pending.size === 0 && now - s.lastEvent > LIVE_IDLE_AFTER_MS) {
+        clearAll(main);
+        setBase(main, 'waiting', now, DONE);
         changed = true;
       }
     }

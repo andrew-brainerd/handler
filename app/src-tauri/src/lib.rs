@@ -47,6 +47,7 @@ fn apply_start_on_login(app: &AppHandle, enabled: bool) {
 }
 
 fn store(app: &AppHandle, next: Settings) -> Result<(), String> {
+    let next = next.normalized();
     next.validate()?;
     let relay = app.state::<Relay>();
     let before = relay.settings();

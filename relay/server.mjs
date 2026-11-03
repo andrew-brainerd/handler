@@ -11,6 +11,8 @@ import { Forwarder, HEARTBEAT_MS, Peers, sortSessions } from './peers.mjs';
 import { isQuiet, parseQuiet } from './quiet.mjs';
 import { WarpTabs, warpDatabase } from './warp.mjs';
 import { readBoard, writeBoard } from './store.mjs';
+import { liveDir, readLive } from './live.mjs';
+import { isLocal, startDiscovery } from './discovery.mjs';
 
 const { values: args } = parseArgs({
   options: {
@@ -19,6 +21,9 @@ const { values: args } = parseArgs({
     'no-summaries': { type: 'boolean', default: false },
     roku: { type: 'string', default: process.env.HANDLER_ROKU ?? '' },
     forward: { type: 'string', default: process.env.HANDLER_FORWARD ?? '' },
+    'forward-host': { type: 'string', default: process.env.HANDLER_FORWARD_HOST ?? '' },
+    name: { type: 'string', default: hostname() },
+    'discovery-port': { type: 'string', default: '' },
     data: { type: 'string', default: process.env.HANDLER_DATA ?? '' },
     parent: { type: 'string', default: '' },
     quiet: { type: 'string', default: process.env.HANDLER_QUIET ?? '' },
@@ -50,15 +55,15 @@ function locate(cwd) {
 const log = (...parts) => console.log(new Date().toISOString().slice(11, 19), ...parts);
 
 const warp = new WarpTabs(warpDatabase(), { log });
-await warp.open();
-warp.refresh();
-if (args.verbose && warp.query) log(`warp tabs: ${warp.path}`);
 
 const board = new Board({
   locate,
   tabName: (id) => warp.title(id),
   onNewEventType: (name, keys) => args.verbose && log(`first ${name}: ${keys.join(', ')}`),
 });
+
+const sessionsDir = liveDir();
+const scanLive = () => board.syncLive(readLive(sessionsDir, { host: args.name }));
 
 const CHARACTERS = join(import.meta.dirname, '..', 'characters');
 if (args.data) mkdirSync(args.data, { recursive: true });
@@ -72,14 +77,29 @@ if (boardFile) {
     log(`couldn't restore the board: ${err.message}`);
   }
 }
+scanLive();
 const cast = new Cast(CHARACTERS, args.data || CHARACTERS);
 if (args.verbose) log(`cast: ${cast.characters.map((c) => c.id).join(', ') || 'none'}`);
 
 const peers = new Peers();
 
-const forwarder = args.forward
-  ? new Forwarder({ url: args.forward, host: hostname(), snapshot: () => board.snapshot(), log })
-  : null;
+const followHost = args.forward ? '' : args['forward-host'];
+const forwarder =
+  args.forward || followHost
+    ? new Forwarder({ url: args.forward || null, host: args.name, snapshot: () => board.snapshot(), log })
+    : null;
+
+const mains = startDiscovery({
+  name: args.name,
+  port: Number(args.port),
+  isMain: !forwarder,
+  log,
+  ...(args['discovery-port'] ? { discoveryPort: Number(args['discovery-port']) } : {}),
+  onMain: (main) => {
+    if (main.host !== followHost) return;
+    if (forwarder.point(`http://${main.address}:${main.port}`)) forwarder.send();
+  },
+});
 
 function status() {
   const snap = board.snapshot();
@@ -92,11 +112,6 @@ function status() {
 
 const SAFE_NAME = /^[\w-]+$/;
 const SAFE_FILE = /^[\w-]+\.(png|json)$/;
-
-const isLocal = (address = '') => {
-  const ip = address.replace(/^::ffff:/, '');
-  return ip === '::1' || /^(127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(ip);
-};
 
 const clients = new Set();
 let broadcastTimer = null;
@@ -221,6 +236,15 @@ const server = createServer(async (req, res) => {
       res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
       return res.end(JSON.stringify(peers.hosts()));
     }
+    if (req.method === 'GET' && url.pathname === '/mains') {
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'Access-Control-Allow-Origin': '*' });
+      return res.end(
+        JSON.stringify({
+          mains: mains.list().map(({ host, address, port }) => ({ host, address, port })),
+          forwarding: forwarder ? { host: followHost || null, url: forwarder.url, ok: forwarder.ok } : null,
+        }),
+      );
+    }
     if (req.method === 'GET' && url.pathname === '/status') {
       res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'Access-Control-Allow-Origin': '*' });
       return res.end(JSON.stringify(status()));
@@ -266,7 +290,8 @@ const server = createServer(async (req, res) => {
 });
 
 setInterval(async () => {
-  let changed = board.sweep();
+  let changed = scanLive();
+  if (board.sweep()) changed = true;
   if (warp.refresh()) {
     board.seq++;
     changed = true;
@@ -322,3 +347,11 @@ if (args.parent) {
 }
 
 server.listen(Number(args.port), '0.0.0.0', () => log(`Handler relay on http://localhost:${args.port}/`));
+
+warp.open().then(() => {
+  if (args.verbose && warp.query) log(`warp tabs: ${warp.path}`);
+  if (warp.refresh()) {
+    board.seq++;
+    broadcast();
+  }
+});

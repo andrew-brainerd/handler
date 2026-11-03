@@ -1,4 +1,5 @@
 import { existsSync } from 'node:fs';
+import { open as openFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 
@@ -35,6 +36,8 @@ export class WarpTabs {
   async open() {
     if (!this.path || this.db) return;
     try {
+      // A macOS privacy prompt blocks the first open until it's answered, so do that off the main thread.
+      await (await openFile(this.path, 'r')).close();
       const { DatabaseSync } = await import('node:sqlite');
       this.db = new DatabaseSync(this.path, { readOnly: true });
       this.query = this.db.prepare(QUERY);
