@@ -623,6 +623,7 @@ sub setSlideAvatar(s as object, variant as string)
         spec.frames = st.frames
         spec.fps = st.fps
         spec.loop = st.loop
+        spec.rest = st.rest
     end if
     m.slideAvatar.spec = spec
     m.slideAvatar.visible = true

@@ -33,6 +33,9 @@ sub onSpec()
     m.size = size
     m.frames = s.frames
     m.loop = s.loop
+    m.frameTime = 1.0 / s.fps
+    m.rest = 0
+    if s.rest <> invalid then m.rest = s.rest
     m.cols = s.cols
     cols = s.cols
     if s.frames < cols then cols = s.frames
@@ -47,16 +50,22 @@ sub onSpec()
     showFrame()
     m.timer.control = "stop"
     if s.frames > 1
-        m.timer.duration = 1.0 / s.fps
+        m.timer.duration = m.frameTime
         m.timer.control = "start"
     end if
 end sub
 
 sub onTick()
+    m.timer.duration = m.frameTime
     m.frame = m.frame + 1
     if m.frame >= m.frames
         if m.loop
             m.frame = 0
+            if m.rest > 0
+                m.timer.control = "stop"
+                m.timer.duration = m.rest
+                m.timer.control = "start"
+            end if
         else
             m.frame = m.frames - 1
             m.timer.control = "stop"

@@ -226,7 +226,17 @@
       el.style.setProperty('--sheet', `url(/characters/${c.id}/${a.file})`);
       el.style.setProperty('--frames', a.frames);
       el.style.setProperty('--dur', `${a.frames / a.fps}s`);
-      el.style.setProperty('--iter', a.loop ? 'infinite' : '1');
+      el.style.setProperty('--iter', a.loop && !a.rest ? 'infinite' : '1');
+      if (a.loop && a.rest) {
+        const img = el.querySelector('.img');
+        img.addEventListener('animationend', () =>
+          setTimeout(() => {
+            img.style.animation = 'none';
+            void img.offsetWidth;
+            img.style.animation = '';
+          }, a.rest * 1000),
+        );
+      }
     }
     return el;
   }

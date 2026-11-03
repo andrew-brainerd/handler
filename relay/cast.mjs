@@ -3,6 +3,9 @@ import { join } from 'node:path';
 
 const KEEP_MS = 30 * 24 * 3600e3;
 const TINT_STEP = 55;
+const REST_SECONDS = { working: 6, bored: 6, sleeping: 4 };
+
+const withRests = (states) => Object.fromEntries(Object.entries(states).map(([name, state]) => [name, state.loop ? { ...state, rest: REST_SECONDS[name] ?? 0 } : state]));
 
 export class Cast {
   characters = [];
@@ -58,6 +61,6 @@ export class Cast {
   describe(assignment) {
     const c = assignment && this.characters.find((x) => x.id === assignment.character);
     if (!c) return null;
-    return { id: c.id, tint: assignment.tint, frame: c.frame, still: c.still, tv: c.tv, states: c.states };
+    return { id: c.id, tint: assignment.tint, frame: c.frame, still: c.still, tv: c.tv, states: withRests(c.states) };
   }
 }
