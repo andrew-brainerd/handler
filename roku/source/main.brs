@@ -18,9 +18,11 @@ sub ShowBoard(screensaver as boolean)
     input = CreateObject("roInput")
     input.SetMessagePort(port)
     pokes = 0
+    manager = CreateObject("roAppManager")
 
     while true
-        msg = Wait(0, port)
+        msg = Wait(30000, port)
+        if not screensaver then manager.UpdateLastKeyPressTime()
         kind = type(msg)
         if kind = "roSGScreenEvent" and msg.IsScreenClosed() then return
         if kind = "roInputEvent"
