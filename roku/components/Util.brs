@@ -41,7 +41,10 @@ function FormatAgo(seconds as integer) as string
     if seconds < 0 then seconds = 0
     if seconds < 60 then return seconds.ToStr() + "s"
     if seconds < 3600 then return (seconds \ 60).ToStr() + "m"
-    return (seconds \ 3600).ToStr() + "h " + ((seconds mod 3600) \ 60).ToStr() + "m"
+    hours = seconds \ 3600
+    if hours < 10 then return hours.ToStr() + "h " + ((seconds mod 3600) \ 60).ToStr() + "m"
+    if hours < 48 then return hours.ToStr() + "h"
+    return (hours \ 24).ToStr() + "d"
 end function
 
 function FormatClock(dt as object) as string

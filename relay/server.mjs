@@ -7,7 +7,7 @@ import { Board } from './state.mjs';
 import { Cast } from './cast.mjs';
 import { checkTranscript, hasOutcome } from './transcript.mjs';
 import { summarise } from './summarise.mjs';
-import { Forwarder, HEARTBEAT_MS, Peers, sortSessions } from './peers.mjs';
+import { Forwarder, HEARTBEAT_MS, Peers, hideIdle, sortSessions } from './peers.mjs';
 import { isQuiet, parseQuiet } from './quiet.mjs';
 import { WarpTabs, warpDatabase } from './warp.mjs';
 import { readBoard, writeBoard } from './store.mjs';
@@ -121,7 +121,7 @@ async function findRokus() {
 
 function status() {
   const snap = board.snapshot();
-  snap.sessions = sortSessions([...snap.sessions, ...peers.sessions()]);
+  snap.sessions = sortSessions(hideIdle([...snap.sessions, ...peers.sessions()]));
   snap.quiet = isQuiet(quietHours);
   const active = snap.sessions.map((s) => s.id);
   for (const s of snap.sessions) s.character = cast.describe(cast.assign(s.id, active));
@@ -314,8 +314,16 @@ const server = createServer(async (req, res) => {
   }
 });
 
+let shownCount = status().sessions.length;
+
 setInterval(async () => {
   let changed = scanLive();
+  const shown = status().sessions.length;
+  if (shown !== shownCount) {
+    shownCount = shown;
+    board.seq++;
+    changed = true;
+  }
   if (board.sweep()) changed = true;
   if (warp.refresh()) {
     board.seq++;

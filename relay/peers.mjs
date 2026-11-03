@@ -84,6 +84,12 @@ export class Forwarder {
   }
 }
 
+export const IDLE_HIDE_MS = 4 * 3600e3;
+
+export function hideIdle(sessions, now = Date.now()) {
+  return sessions.filter((s) => s.needsYou || (s.state !== 'waiting' && s.state !== 'stale') || now - Date.parse(s.lastEvent) <= IDLE_HIDE_MS);
+}
+
 const RANK = { working: 1, waiting: 2, stale: 3 };
 
 export function sortSessions(sessions) {

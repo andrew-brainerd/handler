@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { Forwarder, PEER_TIMEOUT_MS, Peers, sortSessions } from '../relay/peers.mjs';
+import { Forwarder, PEER_TIMEOUT_MS, Peers, sortSessions, IDLE_HIDE_MS, hideIdle } from '../relay/peers.mjs';
 
 const session = (id, extra = {}) => ({
   id,
@@ -69,4 +69,12 @@ test('the forwarder posts its host and sessions and coalesces overlapping sends'
   assert.equal(posts[0].url, 'http://pc:8790/peer');
   assert.equal(posts[0].body.host, 'mac');
   assert.equal(f.ok, true);
+});
+
+test('idle sessions leave the board but never one that needs you', () => {
+  const now = 1793700000000;
+  const row = (id, state, ageMs, needsYou = false) => ({ id, state, needsYou, lastEvent: new Date(now - ageMs).toISOString() });
+  const old = IDLE_HIDE_MS + 1;
+  const shown = hideIdle([row('fresh', 'waiting', IDLE_HIDE_MS), row('idle', 'waiting', old), row('stuck', 'stale', old), row('busy', 'working', old), row('asking', 'needs_permission', old, true), row('gone', 'ended', old)], now);
+  assert.deepEqual(shown.map((s) => s.id), ['fresh', 'busy', 'asking', 'gone']);
 });
