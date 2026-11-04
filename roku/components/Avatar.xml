@@ -13,5 +13,8 @@
     </Group>
     <Poster id="bubble" width="64" height="60" visible="false" />
     <Timer id="timer" repeat="true" />
+    <Animation id="bob" duration="1.6" repeat="true" easeFunction="linear">
+      <Vector2DFieldInterpolator id="bobMove" key="[0.0, 0.25, 0.5, 0.75, 1.0]" fieldToInterp="clip.translation" />
+    </Animation>
   </children>
 </component>

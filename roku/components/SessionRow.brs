@@ -86,6 +86,7 @@ sub setAvatar(s as object, variant as string, size as integer, height as integer
         spec.fps = st.fps
         spec.loop = st.loop
         spec.rest = st.rest
+        spec.bob = anim = "working"
     end if
     frame = size + 8
     avatarX = 20 + (136 - frame) / 2

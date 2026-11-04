@@ -58,6 +58,7 @@
   .row.needs_permission .avatar:not(.sprite), .row.asking .avatar:not(.sprite) { animation: bob 1s ease-in-out infinite; }
   .avatar.sprite { background: #0f1216; position: relative; }
   .avatar.sprite .img { border-radius: inherit; width: 100%; height: 100%; background-image: var(--sheet); background-repeat: no-repeat; background-size: calc(var(--frames) * 100%) 100%; image-rendering: pixelated; animation: sprite var(--dur) steps(var(--frames), jump-none) var(--iter) both; filter: hue-rotate(var(--tint)); }
+  .avatar.sprite.bobbing .img { animation: sprite var(--dur) steps(var(--frames), jump-none) var(--iter) both, float 1.6s ease-in-out infinite; }
   .avatar.sprite.still .img { background-size: 100% 100%; animation: none; }
   .bubble { position: absolute; top: -14px; right: -14px; width: 40px; height: 36px; border-radius: 50%; background: #f4f1ea; color: #14171c; font-size: 26px; font-weight: 800; line-height: 36px; text-align: center; box-shadow: 0 0 0 3px #14171c; animation: bob 1.2s ease-in-out infinite; }
   .bubble::before, .bubble::after { content: ""; position: absolute; border-radius: 50%; background: #f4f1ea; box-shadow: 0 0 0 3px #14171c; }
@@ -123,6 +124,7 @@
   #detail .close { position: absolute; right: 72px; top: 60px; font-size: 26px; color: var(--dim); }
   @keyframes pulse { 50% { box-shadow: 0 0 8px 2px #ff4d3d55; } }
   @keyframes bob { 50% { transform: translateY(-6px); } }
+  @keyframes float { 50% { translate: 0 -3%; } }
   @keyframes sprite { from { background-position: 0 0; } to { background-position: 100% 0; } }
 </style>
 </head>
@@ -226,16 +228,13 @@
       el.style.setProperty('--sheet', `url(/characters/${c.id}/${a.file})`);
       el.style.setProperty('--frames', a.frames);
       el.style.setProperty('--dur', `${a.frames / a.fps}s`);
+      el.classList.toggle('bobbing', anim === 'working');
       el.style.setProperty('--iter', a.loop && !a.rest ? 'infinite' : '1');
       if (a.loop && a.rest) {
         const img = el.querySelector('.img');
-        img.addEventListener('animationend', () =>
-          setTimeout(() => {
-            img.style.animation = 'none';
-            void img.offsetWidth;
-            img.style.animation = '';
-          }, a.rest * 1000),
-        );
+        img.addEventListener('animationend', (e) => {
+          if (e.animationName === 'sprite') setTimeout(() => img.getAnimations().find((x) => x.animationName === 'sprite')?.play(), a.rest * 1000);
+        });
       }
     }
     return el;
