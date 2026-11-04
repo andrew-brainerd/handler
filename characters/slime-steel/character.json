@@ -30,8 +30,8 @@
     "working": {
       "file": "working.png",
       "tv": "working-tv.png",
-      "frames": 16,
-      "fps": 6,
+      "frames": 8,
+      "fps": 3,
       "loop": true
     },
     "sleepy": {
