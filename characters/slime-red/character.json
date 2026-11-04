@@ -37,8 +37,8 @@
     "working": {
       "file": "working.png",
       "tv": "working-tv.png",
-      "frames": 9,
-      "fps": 10,
+      "frames": 16,
+      "fps": 6,
       "loop": true
     },
     "sleeping": {

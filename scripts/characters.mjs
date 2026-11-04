@@ -23,7 +23,7 @@ const KINDS = {
   slime: {
     describe: (subject) => `${subject}, retro 16-bit game monster sprite, clean bold lines, flat colors with two-tone hard-edged shading, one smooth rounded dome shape like a water balloon with a flat bottom, a single solid color, one glossy highlight, simple solid black oval eyes with one small white highlight, no eyelashes, no blush, small plain mouth, front view looking straight at the viewer, whole body, centered`,
     expressions: {
-      working: { action: 'busy and bouncy: the slime squashes down and springs back up, eyes bright and focused, a small determined smile', frames: 8, fps: 10, loop: true },
+      working: { breathe: true, frames: 16, fps: 6, loop: true },
       puzzled: { action: 'puzzled: the slime leans and tilts to one side, both eyes stay solid black ovals, a small unsure frown, the body wobbles', frames: 8, fps: 8, loop: false },
       bored: { action: 'bored and unimpressed, eyes stay open the whole time: flat half-lidded stare, the body slumps and spreads a little flatter, mouth pulls into a flat sideways frown, a slow sigh', frames: 8, fps: 6, loop: true, pingpong: true },
       sleepy: { action: 'getting sleepy: eyelids droop, a big yawn, the body sags and melts lower, eyes close', frames: 8, fps: 6, loop: false },
@@ -32,6 +32,7 @@ const KINDS = {
   },
 };
 const kindOf = (meta) => KINDS[meta.kind ?? 'head'];
+const BREATH = { wider: 0.04, shorter: 0.07 };
 
 const { values: args, positionals } = parseArgs({
   allowPositionals: true,
@@ -121,6 +122,30 @@ async function create(id) {
   log(`${id}: base ${kind} (${subject})`, res.usage ? JSON.stringify(res.usage) : '');
 }
 
+async function breathe(id, name, count) {
+  const base = readFileSync(join(rawDir(id), 'base.png'));
+  const { data, info } = await sharp(base).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  let box = { x0: info.width, y0: info.height, x1: 0, y1: 0 };
+  for (let y = 0; y < info.height; y++)
+    for (let x = 0; x < info.width; x++)
+      if (data[(y * info.width + x) * 4 + 3] > 0) box = { x0: Math.min(box.x0, x), y0: Math.min(box.y0, y), x1: Math.max(box.x1, x), y1: Math.max(box.y1, y) };
+  const width = box.x1 - box.x0 + 1;
+  const height = box.y1 - box.y0 + 1;
+  const body = await sharp(base).extract({ left: box.x0, top: box.y0, width, height }).png().toBuffer();
+  for (let i = 0; i < count; i++) {
+    const swell = (1 - Math.cos((2 * Math.PI * i) / count)) / 2;
+    const w = Math.min(info.width, Math.round(width * (1 + BREATH.wider * swell)));
+    const h = Math.round(height * (1 - BREATH.shorter * swell));
+    const input = await sharp(body).resize(w, h, { kernel: 'nearest', fit: 'fill' }).png().toBuffer();
+    const left = Math.max(0, Math.min(info.width - w, Math.round((box.x0 + box.x1 + 1 - w) / 2)));
+    await sharp({ create: { width: info.width, height: info.height, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } })
+      .composite([{ input, left, top: box.y1 + 1 - h }])
+      .png()
+      .toFile(join(rawDir(id), `${name}-${String(i).padStart(2, '0')}.png`));
+  }
+  return count;
+}
+
 async function animate(id) {
   const meta = loadMeta(id);
   const EXPRESSIONS = kindOf(meta).expressions;
@@ -135,6 +160,11 @@ async function animate(id) {
     names.map(async (name) => {
       if (meta.expressions[name] && !(args.redo && args.only)) return log(`${id}/${name}: already animated`);
       const spec = EXPRESSIONS[name];
+      if (spec.breathe) {
+        meta.expressions[name] = { frames: await breathe(id, name, spec.frames), at: new Date().toISOString() };
+        saveMeta(id, meta);
+        return log(`${id}/${name}: breathing frames built from the still`);
+      }
       const res = await api('POST', '/animate-with-text-v3', {
         first_frame: { type: 'base64', base64: firstFrame(spec) },
         action: spec.action,

@@ -51,11 +51,12 @@ test('a free character is preferred, least recently used first', () => {
 test('looping animations rest between plays, and one-shots do not', () => {
   const dir = mkdtempSync(join(tmpdir(), 'handler-rest-'));
   mkdirSync(join(dir, 'slime'));
-  const states = { working: { frames: 9, fps: 10, loop: true }, puzzled: { frames: 9, fps: 8, loop: false } };
+  const states = { bored: { frames: 9, fps: 10, loop: true }, working: { frames: 16, fps: 6, loop: true }, puzzled: { frames: 9, fps: 8, loop: false } };
   writeFileSync(join(dir, 'slime', 'character.json'), JSON.stringify({ id: 'slime', states }));
   const cast = new Cast(dir);
   const { states: shown } = cast.describe({ character: 'slime', tint: 0 });
-  assert.equal(shown.working.rest, 6);
+  assert.equal(shown.bored.rest, 6);
+  assert.equal(shown.working.rest, 0);
   assert.equal(shown.puzzled.rest, undefined);
-  assert.equal(cast.characters[0].states.working.rest, undefined);
+  assert.equal(cast.characters[0].states.bored.rest, undefined);
 });

@@ -3,12 +3,12 @@
   "name": "steel blue slime wearing a small black headset with a microphone",
   "kind": "slime",
   "frame": {
-    "w": 63,
-    "h": 63
+    "w": 64,
+    "h": 64
   },
   "still": "still.png",
   "tv": {
-    "frame": 126,
+    "frame": 128,
     "cols": 8,
     "still": "still-tv.png"
   },
@@ -30,8 +30,8 @@
     "working": {
       "file": "working.png",
       "tv": "working-tv.png",
-      "frames": 9,
-      "fps": 10,
+      "frames": 16,
+      "fps": 6,
       "loop": true
     },
     "sleepy": {

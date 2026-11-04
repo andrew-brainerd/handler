@@ -3,12 +3,12 @@
   "name": "lime green jelly slime with a short metal antenna on top",
   "kind": "slime",
   "frame": {
-    "w": 49,
-    "h": 49
+    "w": 51,
+    "h": 51
   },
   "still": "still.png",
   "tv": {
-    "frame": 98,
+    "frame": 102,
     "cols": 8,
     "still": "still-tv.png"
   },
@@ -37,8 +37,8 @@
     "working": {
       "file": "working.png",
       "tv": "working-tv.png",
-      "frames": 9,
-      "fps": 10,
+      "frames": 16,
+      "fps": 6,
       "loop": true
     },
     "sleeping": {

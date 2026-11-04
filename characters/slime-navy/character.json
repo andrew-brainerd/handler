@@ -3,12 +3,12 @@
   "name": "navy blue slime wearing a small black bow tie",
   "kind": "slime",
   "frame": {
-    "w": 56,
-    "h": 56
+    "w": 58,
+    "h": 58
   },
   "still": "still.png",
   "tv": {
-    "frame": 112,
+    "frame": 116,
     "cols": 8,
     "still": "still-tv.png"
   },
@@ -16,8 +16,8 @@
     "working": {
       "file": "working.png",
       "tv": "working-tv.png",
-      "frames": 9,
-      "fps": 10,
+      "frames": 16,
+      "fps": 6,
       "loop": true
     },
     "puzzled": {
