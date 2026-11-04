@@ -122,8 +122,98 @@ async function create(id) {
   log(`${id}: base ${kind} (${subject})`, res.usage ? JSON.stringify(res.usage) : '');
 }
 
+const SMILE = [[-3, 0], [-2, 1], [-1, 2], [0, 2], [1, 2], [2, 1], [3, 0]];
+const DARK = 62;
+const MOUTH_SHADE = 0.72;
+const MOUTH_REACH = { x: 6, y: 3 };
+
+async function smiling(input) {
+  const { data, info } = await sharp(input).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  const { width, height } = info;
+  const at = (x, y) => (y * width + x) * 4;
+  const solid = (x, y) => x >= 0 && y >= 0 && x < width && y < height && data[at(x, y) + 3] > 200;
+  const dark = (x, y) => solid(x, y) && 0.3 * data[at(x, y)] + 0.59 * data[at(x, y) + 1] + 0.11 * data[at(x, y) + 2] < DARK;
+  const seen = new Set();
+  const blobs = [];
+  for (let y = 0; y < height; y++)
+    for (let x = 0; x < width; x++) {
+      if (!dark(x, y) || seen.has(y * width + x)) continue;
+      const blob = { x0: x, x1: x, y0: y, y1: y, size: 0, inside: true };
+      const stack = [[x, y]];
+      seen.add(y * width + x);
+      while (stack.length) {
+        const [cx, cy] = stack.pop();
+        blob.size++;
+        blob.x0 = Math.min(blob.x0, cx);
+        blob.x1 = Math.max(blob.x1, cx);
+        blob.y0 = Math.min(blob.y0, cy);
+        blob.y1 = Math.max(blob.y1, cy);
+        for (const [nx, ny] of [[cx + 1, cy], [cx - 1, cy], [cx, cy + 1], [cx, cy - 1]]) {
+          if (!solid(nx, ny)) blob.inside = false;
+          else if (dark(nx, ny) && !seen.has(ny * width + nx)) {
+            seen.add(ny * width + nx);
+            stack.push([nx, ny]);
+          }
+        }
+      }
+      if (blob.inside) blobs.push({ ...blob, cx: (blob.x0 + blob.x1) / 2, cy: (blob.y0 + blob.y1) / 2 });
+    }
+  let eyes = null;
+  for (const a of blobs)
+    for (const b of blobs) {
+      if (a.cx >= b.cx || Math.abs(a.cy - b.cy) > 3 || Math.abs(a.size - b.size) > 8 || a.size < 6 || b.cx - a.cx < 6) continue;
+      if (!eyes || a.size + b.size > eyes[0].size + eyes[1].size) eyes = [a, b];
+    }
+  if (!eyes) throw new Error('no eyes found');
+  const [left, right] = eyes;
+  const mx = Math.round((left.cx + right.cx) / 2);
+  const below = Math.max(left.y1, right.y1);
+  const lum = (x, y) => 0.3 * data[at(x, y)] + 0.59 * data[at(x, y) + 1] + 0.11 * data[at(x, y) + 2];
+  const skin = lum(mx, Math.round((left.cy + right.cy) / 2));
+  const marked = (x, y) => solid(x, y) && lum(x, y) < skin * MOUTH_SHADE;
+  const darkMouth = blobs.filter((b) => b !== left && b !== right && b.y0 > left.cy && b.cx > left.x1 - 1 && b.cx < right.x0 + 1 && b.y0 <= below + 8).sort((p, q) => p.y0 - q.y0)[0];
+  let start = darkMouth ? [Math.round(darkMouth.cx), Math.round(darkMouth.cy)] : null;
+  for (let y = below + 1; y <= below + 9 && !start; y++)
+    for (const dx of [0, -1, 1, -2, 2, -3, 3]) if (marked(mx + dx, y)) start = [mx + dx, y];
+  let mouth = null;
+  if (start) {
+    const reachable = (x, y) => Math.abs(x - start[0]) <= MOUTH_REACH.x && y > below && Math.abs(y - start[1]) <= MOUTH_REACH.y && (marked(x, y) || dark(x, y));
+    const box = { x0: start[0], x1: start[0], y0: start[1], y1: start[1] };
+    const stack = [start];
+    const visited = new Set([start[1] * width + start[0]]);
+    while (stack.length) {
+      const [cx, cy] = stack.pop();
+      box.x0 = Math.min(box.x0, cx);
+      box.x1 = Math.max(box.x1, cx);
+      box.y0 = Math.min(box.y0, cy);
+      box.y1 = Math.max(box.y1, cy);
+      for (const [nx, ny] of [[cx + 1, cy], [cx - 1, cy], [cx, cy + 1], [cx, cy - 1], [cx + 1, cy + 1], [cx - 1, cy + 1], [cx + 1, cy - 1], [cx - 1, cy - 1]]) {
+        const key = ny * width + nx;
+        if (reachable(nx, ny) && !visited.has(key)) {
+          visited.add(key);
+          stack.push([nx, ny]);
+        }
+      }
+    }
+    mouth = box;
+  }
+  const my = mouth ? Math.round((mouth.y0 + mouth.y1) / 2) - 1 : below + 3;
+  if (mouth) {
+    for (let y = mouth.y0 - 1; y <= mouth.y1 + 1; y++) {
+      const fill = data.slice(at(mouth.x0 - 3, y), at(mouth.x0 - 3, y) + 4);
+      for (let x = mouth.x0 - 1; x <= mouth.x1 + 1; x++) if (solid(x, y)) data.set(fill, at(x, y));
+    }
+  }
+  let ink = data.slice(at(left.x0, left.y0), at(left.x0, left.y0) + 4);
+  for (let y = left.y0; y <= left.y1; y++)
+    for (let x = left.x0; x <= left.x1; x++) if (solid(x, y) && lum(x, y) < 0.3 * ink[0] + 0.59 * ink[1] + 0.11 * ink[2]) ink = data.slice(at(x, y), at(x, y) + 4);
+  for (const [dx, dy] of SMILE) if (solid(mx + dx, my + dy)) data.set(ink, at(mx + dx, my + dy));
+  return sharp(data, { raw: { width, height, channels: 4 } }).png().toBuffer();
+}
+
 async function breathe(id, name, count) {
-  const base = readFileSync(join(rawDir(id), 'base.png'));
+  const base = await smiling(readFileSync(join(rawDir(id), 'base.png')));
+  writeFileSync(join(rawDir(id), 'smile.png'), base);
   const { data, info } = await sharp(base).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
   let box = { x0: info.width, y0: info.height, x1: 0, y1: 0 };
   for (let y = 0; y < info.height; y++)
