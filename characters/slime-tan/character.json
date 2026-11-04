@@ -3,12 +3,12 @@
   "name": "sandy tan slime wearing the upturned collar of a brown trench coat",
   "kind": "slime",
   "frame": {
-    "w": 55,
-    "h": 55
+    "w": 53,
+    "h": 53
   },
   "still": "still.png",
   "tv": {
-    "frame": 110,
+    "frame": 106,
     "cols": 8,
     "still": "still-tv.png"
   },

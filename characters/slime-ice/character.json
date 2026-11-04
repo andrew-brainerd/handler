@@ -3,12 +3,12 @@
   "name": "icy white slime wearing a short red scarf",
   "kind": "slime",
   "frame": {
-    "w": 58,
-    "h": 58
+    "w": 56,
+    "h": 56
   },
   "still": "still.png",
   "tv": {
-    "frame": 116,
+    "frame": 112,
     "cols": 8,
     "still": "still-tv.png"
   },

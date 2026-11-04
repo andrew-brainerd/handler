@@ -32,7 +32,7 @@ const KINDS = {
   },
 };
 const kindOf = (meta) => KINDS[meta.kind ?? 'head'];
-const BREATH = { wider: 0.04, shorter: 0.07 };
+const BREATH = { wider: 0, shorter: 0.07 };
 
 const { values: args, positionals } = parseArgs({
   allowPositionals: true,

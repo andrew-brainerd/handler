@@ -3,12 +3,12 @@
   "name": "teal slime",
   "kind": "slime",
   "frame": {
-    "w": 64,
-    "h": 64
+    "w": 62,
+    "h": 62
   },
   "still": "still.png",
   "tv": {
-    "frame": 128,
+    "frame": 124,
     "cols": 8,
     "still": "still-tv.png"
   },

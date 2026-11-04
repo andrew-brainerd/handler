@@ -3,12 +3,12 @@
   "name": "charcoal grey slime with a small walkie-talkie strapped to its side",
   "kind": "slime",
   "frame": {
-    "w": 56,
-    "h": 56
+    "w": 54,
+    "h": 54
   },
   "still": "still.png",
   "tv": {
-    "frame": 112,
+    "frame": 108,
     "cols": 8,
     "still": "still-tv.png"
   },
