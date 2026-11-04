@@ -4,9 +4,6 @@ sub init()
     m.sheet = m.top.findNode("sheet")
     m.bubble = m.top.findNode("bubble")
     m.timer = m.top.findNode("timer")
-    m.clipGroup = m.top.findNode("clip")
-    m.bob = m.top.findNode("bob")
-    m.bobMove = m.top.findNode("bobMove")
     m.timer.observeField("fire", "onTick")
     m.key = ""
     m.frame = 0
@@ -51,14 +48,6 @@ sub onSpec()
 
     m.frame = 0
     showFrame()
-    m.bob.control = "stop"
-    m.clipGroup.translation = [4, 4]
-    if s.bob = true
-        reach = size * 0.03
-        eased = reach * 0.7
-        m.bobMove.keyValue = [[4, 4], [4, 4 - eased], [4, 4 - reach], [4, 4 - eased], [4, 4]]
-        m.bob.control = "start"
-    end if
     m.timer.control = "stop"
     if s.frames > 1
         m.timer.duration = m.frameTime
