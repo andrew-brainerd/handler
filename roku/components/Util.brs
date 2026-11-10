@@ -59,7 +59,7 @@ function FormatClock(dt as object) as string
 end function
 
 function StateText(state as string) as string
-    names = { working: "Working", waiting: "Done", needs_permission: "Needs permission", asking: "Asked a question", stale: "No activity for 30 min", ended: "Ended" }
+    names = { working: "Working", waiting: "Done", needs_permission: "Needs permission", asking: "Asked a question", done: "Done", stale: "No activity for 30 min", ended: "Ended" }
     if names.DoesExist(state) then return names[state]
     return state
 end function
@@ -70,10 +70,47 @@ function WaitingDetail(s as object) as string
     return detail
 end function
 
-function RowHeight(state as string, featured as boolean) as integer
+function BaseRowHeight(state as string, featured as boolean) as integer
     if featured then return 320
     if IsCompact(state) then return 96
     return 152
+end function
+
+function RowHeight(s as object, featured as boolean) as integer
+    return BaseRowHeight(AsText(s.state), featured) + SubBlockHeight(s)
+end function
+
+function SubCardHeight() as integer
+    return 72
+end function
+
+function SubMax() as integer
+    return 5
+end function
+
+function SubCount(s as object) as integer
+    if type(s.subagentList) <> "roArray" then return 0
+    return s.subagentList.Count()
+end function
+
+function MoreSubagents(n as integer) as string
+    if n = 1 then return "+1 more subagent"
+    return "+" + n.ToStr() + " more subagents"
+end function
+
+function SubCap(s as object) as integer
+    if s.subCap <> invalid then return s.subCap
+    return SubMax()
+end function
+
+function SubBlockHeight(s as object) as integer
+    n = SubCount(s)
+    if n = 0 or SubCap(s) = 0 then return 0
+    shown = n
+    if shown > SubCap(s) then shown = SubCap(s)
+    h = shown * (SubCardHeight() + 8) + 12
+    if n > shown then h = h + 36
+    return h
 end function
 
 function PickFeatured(sessions as object) as string

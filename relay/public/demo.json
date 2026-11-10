@@ -50,9 +50,12 @@
       "subagents": 1,
       "subagentList": [
         {
+          "id": "ag-nav",
           "type": "general-purpose",
           "description": "DrewTube nav bar + context menu",
-          "state": "needs_permission"
+          "state": "needs_permission",
+          "line": "Bash: Run the Rust tests",
+          "started": "-900"
         }
       ],
       "since": "-40",
@@ -75,8 +78,33 @@
       "summary": "Switching the browser board from a card grid to rows with more detail text",
       "summarySource": "summary",
       "todo": null,
-      "subagents": 0,
-      "subagentList": [],
+      "subagents": 2,
+      "subagentList": [
+        {
+          "id": "ag-hooks",
+          "type": "Explore",
+          "description": "Find subagent hook payloads",
+          "state": "working",
+          "line": "Grep \"SubagentStart\"",
+          "started": "-240"
+        },
+        {
+          "id": "ag-roku",
+          "type": "general-purpose",
+          "description": "Build Roku sidekick cards",
+          "state": "working",
+          "line": "Edit SessionRow.brs",
+          "started": "-200"
+        },
+        {
+          "id": "ag-plan",
+          "type": "Plan",
+          "description": "Draft the spec change",
+          "state": "done",
+          "line": "Read handler.md",
+          "started": "-400"
+        }
+      ],
       "since": "-12",
       "lastEvent": "-3",
       "started": "-7200",

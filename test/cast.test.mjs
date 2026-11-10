@@ -60,3 +60,14 @@ test('looping animations rest between plays, and one-shots do not', () => {
   assert.equal(shown.puzzled.rest, undefined);
   assert.equal(cast.characters[0].states.bored.rest, undefined);
 });
+
+test('sidekicks avoid the parent character and each other, and stay put', () => {
+  const { dir, cast } = castWith(['robot', 'wizard', 'fox', 'owl']);
+  const picks = cast.sidekicks('robot', ['ag1', 'ag2', 'ag3']);
+  const chars = [...picks.values()].map((p) => p.character);
+  assert.ok(!chars.includes('robot'));
+  assert.equal(new Set(chars).size, 3);
+  assert.deepEqual(cast.sidekicks('robot', ['ag1', 'ag2', 'ag3']), picks);
+  assert.equal(cast.sidekicks('robot', ['ag1']).get('ag1').character, picks.get('ag1').character);
+  rmSync(dir, { recursive: true });
+});

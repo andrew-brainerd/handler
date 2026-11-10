@@ -40,6 +40,16 @@ async function cards() {
   await ninePatch('card-focus.9.png', 96, 96, focus, { x0: 32, x1: 64, y0: 32, y1: 64 });
 }
 
+async function subcards() {
+  for (const [name, accent] of Object.entries({ working: C.green, dim: C.grey, alert: C.red })) {
+    const w = 48;
+    const body = `<defs><clipPath id="c"><rect x="1" y="1" width="${w - 2}" height="${w - 2}" rx="12"/></clipPath></defs>
+      <rect x="1" y="1" width="${w - 2}" height="${w - 2}" rx="12" fill="#1e2228" stroke="${name === 'alert' ? '#ff4d3d99' : C.line}" stroke-width="2"/>
+      <rect x="0" y="0" width="5" height="${w}" fill="${accent}" clip-path="url(#c)"/>`;
+    await ninePatch(`subcard-${name}.9.png`, w, w, body, { x0: 16, x1: 32, y0: 16, y1: 32 });
+  }
+}
+
 async function avatarFrames() {
   for (const [name, color] of Object.entries({ working: C.green, waiting: C.amber, dim: C.grey, alert: C.red })) {
     const w = 72;
@@ -129,6 +139,7 @@ function chime() {
 
 mkdirSync(OUT, { recursive: true });
 await cards();
+await subcards();
 await avatarFrames();
 await bubbles();
 await lamps();

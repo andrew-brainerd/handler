@@ -137,20 +137,33 @@ end sub
 
 function fitRows(sessions as object, height as integer) as object
     featuredId = PickFeatured(sessions)
-    used = 0
-    shown = []
-    for i = 0 to sessions.Count() - 1
-        s = sessions[i]
-        cost = RowHeight(s.state, s.id = featuredId)
-        gap = 0
-        if shown.Count() > 0 then gap = 16
-        reserve = 0
-        if i + 1 < sessions.Count() then reserve = 16 + 56
-        if used + gap + cost + reserve > height and shown.Count() > 0 then exit for
-        used = used + gap + cost
-        shown.Push(s)
+    best = []
+    bestCap = 5
+    for each cap in [5, 3, 1, 0]
+        used = 0
+        shown = []
+        for i = 0 to sessions.Count() - 1
+            s = sessions[i]
+            s.subCap = cap
+            cost = RowHeight(s, s.id = featuredId)
+            gap = 0
+            if shown.Count() > 0 then gap = 16
+            reserve = 0
+            if i + 1 < sessions.Count() then reserve = 16 + 56
+            if used + gap + cost + reserve > height and shown.Count() > 0 then exit for
+            used = used + gap + cost
+            shown.Push(s)
+        end for
+        if shown.Count() > best.Count()
+            best = shown
+            bestCap = cap
+        end if
+        if shown.Count() = sessions.Count() then exit for
     end for
-    return shown
+    for each s in sessions
+        s.subCap = bestCap
+    end for
+    return best
 end function
 
 sub render()
@@ -188,7 +201,7 @@ sub render()
         m.sinceById[id] = s.since
         keep[id] = true
         m.shownIds.Push(id)
-        y = y + RowHeight(s.state, featured) + 16
+        y = y + RowHeight(s, featured) + 16
     end for
     for each id in m.rowNodes.Keys()
         if not keep.DoesExist(id)
@@ -294,7 +307,7 @@ sub showFocus()
         return
     end if
     node = m.rowNodes[m.shownIds[m.focus]]
-    height = RowHeight(AsText(node.session.state), node.featured)
+    height = RowHeight(node.session, node.featured)
     m.focusRing.width = 1776 + 8
     m.focusRing.height = height + 8
     m.focusRing.translation = [node.translation[0] - 4, node.translation[1] - 4]
@@ -370,9 +383,11 @@ sub showDetail(id as string)
     if type(s.subagentList) = "roArray" and s.subagentList.Count() > 0
         subs = []
         for each a in s.subagentList
-            subs.Push("• " + AsText(a.type) + ": " + AsText(a.description) + " (" + StateText(AsText(a.state)) + ")")
+            line = "• " + AsText(a.type) + ": " + AsText(a.description) + " (" + StateText(AsText(a.state)) + ")"
+            if AsText(a.line) <> "" then line = line + "  ·  " + AsText(a.line)
+            subs.Push(line)
         end for
-        addSection("Subagents", subs.Join(Chr(10)), 4)
+        addSection("Subagents", subs.Join(Chr(10)), 6)
     end if
     if AsText(s.lastMessage) <> ""
         addDetail("LAST MESSAGE", 24, m.c.dim)
@@ -530,6 +545,12 @@ sub buildSlide()
     m.slideMarkdown = m.slide.createChild("MarkdownView")
     m.slideMarkdown.translation = [0, 290]
     m.slideMarkdown.visible = false
+    m.slideSubs = m.slide.createChild("Group")
+    m.slideSubs.translation = [0, 246]
+    m.slideSubCards = []
+    m.slideSubMore = MakeLabel(m.slideSubs, 26, m.c.dim)
+    m.slideSubMore.height = SubCardHeight()
+    m.slideSubMore.vertAlign = "center"
     m.slideFooter = MakeLabel(m.slide, 26, m.c.dim)
     m.slideFooter.width = 1776
     m.slideFooter.horizAlign = "center"
@@ -667,13 +688,6 @@ function slideContent(s as object) as object
             if AsText(s.todo.current) <> "" then text = text + "  ·  now: " + AsText(s.todo.current)
             text = text + Chr(10) + Chr(10)
         end if
-        if type(s.subagentList) = "roArray" and s.subagentList.Count() > 0
-            subs = []
-            for each a in s.subagentList
-                subs.Push("› " + AsText(a.type) + ": " + AsText(a.description) + " (" + StateText(AsText(a.state)) + ")")
-            end for
-            text = text + subs.Join(Chr(10)) + Chr(10) + Chr(10)
-        end if
         return { label: "RECENT ACTIVITY", text: text + activityText(s, 10) }
     end if
     if AsText(s.lastMessage) <> "" then return { label: "LAST MESSAGE", text: AsText(s.lastMessage), markdown: true }
@@ -689,6 +703,12 @@ sub showSlide()
     m.slideMeta.color = AccentColor(variant)
     m.slideSummary.text = AsText(s.summary)
     content = slideContent(s)
+    bodyTop = 246 + slideSubs(s)
+    m.slideLabel.translation = [0, bodyTop]
+    m.slideBody.translation = [0, bodyTop + 44]
+    m.slideMarkdown.translation = [0, bodyTop + 44]
+    m.slideBody.height = 830 - bodyTop - 44
+    m.slideMarkdown.maxHeight = 830 - bodyTop - 44
     m.slideLabel.text = content.label
     body = content.text
     size = 32
@@ -707,6 +727,39 @@ sub showSlide()
     end if
     showSlideAgo()
 end sub
+
+function slideSubs(s as object) as integer
+    list = []
+    if type(s.subagentList) = "roArray" then list = s.subagentList
+    shown = list.Count()
+    if shown > SubMax() then shown = SubMax()
+    while m.slideSubCards.Count() < shown
+        card = m.slideSubs.createChild("SubagentCard")
+        card.relayUrl = m.top.relayUrl
+        m.slideSubCards.Push(card)
+    end while
+    width = (1776 - 20) \ 2
+    pitch = SubCardHeight() + 8
+    for i = 0 to m.slideSubCards.Count() - 1
+        card = m.slideSubCards[i]
+        card.visible = i < shown
+        if card.visible
+            card.cardWidth = width
+            card.agent = list[i]
+            card.translation = [(i mod 2) * (width + 20), (i \ 2) * pitch]
+        end if
+    end for
+    extra = list.Count() - shown
+    m.slideSubMore.visible = extra > 0
+    slots = shown
+    if extra > 0
+        m.slideSubMore.text = MoreSubagents(extra)
+        m.slideSubMore.translation = [(shown mod 2) * (width + 20) + 16, (shown \ 2) * pitch]
+        slots = shown + 1
+    end if
+    if slots = 0 then return 0
+    return ((slots + 1) \ 2) * pitch + 16
+end function
 
 sub showSlideAgo()
     s = findSession(m.slideId)

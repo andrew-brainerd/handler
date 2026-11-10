@@ -1,7 +1,7 @@
 import { basename } from 'node:path';
 import { sortSessions } from './peers.mjs';
 
-const URGENCY = { asking: 5, needs_permission: 5, working: 3, waiting: 2, stale: 1, ended: 0 };
+const URGENCY = { asking: 5, needs_permission: 5, working: 3, waiting: 2, stale: 1, ended: 0, done: -1 };
 const NEEDS_YOU = new Set(['asking', 'needs_permission']);
 const STALE_MS = 30 * 60e3;
 const ENDED_KEEP_MS = 2 * 60e3;
@@ -9,6 +9,8 @@ const IDLE_EXPIRE_MS = 4 * 3600e3;
 const HIDDEN_EXPIRE_MS = 10 * 60e3;
 const QUIET_WATCH_MS = 30e3;
 const ACTIVITY_KEEP = 20;
+const SUB_DONE_KEEP_MS = 30e3;
+const SPAWNS_KEEP = 20;
 const DONE = 'Done, waiting for you';
 const SUMMARY_EVERY_MS = 60e3;
 const LIVE_IDLE_AFTER_MS = 15e3;
@@ -111,8 +113,8 @@ function firstQuestion(input) {
   return { text: clip(q.question, 200), options: (q.options ?? []).map((o) => clip(o.label, 40)) };
 }
 
-function newAgent(key, type = null, description = null) {
-  return { key, type, description, base: 'waiting', detail: null, since: 0, open: new Map(), pending: new Map() };
+function newAgent(key, type = null, description = null, now = 0) {
+  return { key, type, description, base: 'waiting', detail: null, since: 0, started: now, current: null, done: 0, open: new Map(), pending: new Map() };
 }
 
 function setBase(agent, base, now, detail = null) {
@@ -127,11 +129,32 @@ function clearAll(agent) {
 }
 
 function view(agent) {
+  if (agent.done) return { state: 'done', detail: null, question: null, since: agent.done };
   if (agent.pending.size === 0) return { state: agent.base, detail: agent.detail, question: null, since: agent.since };
   const prompts = [...agent.pending.values()];
   const asking = prompts.find((p) => p.question !== undefined);
   const first = asking ?? prompts.reduce((a, b) => (b.since < a.since ? b : a));
   return { state: asking ? 'asking' : 'needs_permission', detail: first.detail, question: asking?.question ?? null, since: first.since };
+}
+
+function subagentLine(agent, v) {
+  if (v.state === 'asking') return v.question?.text ?? 'Asked a question';
+  if (v.state === 'needs_permission') return v.detail?.replace(/^Needs permission: /, '') ?? null;
+  return agent.current;
+}
+
+function subagentList(agents) {
+  return agents
+    .map((a) => ({ a, v: view(a) }))
+    .sort((x, y) => URGENCY[y.v.state] - URGENCY[x.v.state] || (NEEDS_YOU.has(x.v.state) ? x.v.since - y.v.since : x.a.started - y.a.started))
+    .map(({ a, v }) => ({
+      id: a.key,
+      type: a.type,
+      description: a.description,
+      state: v.state,
+      line: subagentLine(a, v),
+      started: new Date(a.started || v.since || 0).toISOString(),
+    }));
 }
 
 export class Board {
@@ -219,17 +242,18 @@ export class Board {
     };
   }
 
-  #agent(s, e) {
+  #agent(s, e, now) {
     if (!e.agent_id) return s.agents.get('main');
     let a = s.agents.get(e.agent_id);
     if (!a) {
-      a = newAgent(e.agent_id, e.agent_type || null);
+      a = newAgent(e.agent_id, e.agent_type || null, this.#spawnDescription(s, e.agent_type), now);
       s.agents.set(e.agent_id, a);
     }
     return a;
   }
 
   #activity(s, line, agent, now) {
+    if (agent.key !== 'main') agent.current = line;
     s.activity.unshift({ at: now, text: agent.key === 'main' ? line : `↳ ${line}` });
     s.activity.length = Math.min(s.activity.length, ACTIVITY_KEEP);
   }
@@ -239,14 +263,28 @@ export class Board {
     return false;
   }
 
+  #spawnDescription(s, type) {
+    const spawns = (s.spawns ??= []);
+    const i = spawns.findIndex((x) => x.type === type);
+    return i < 0 ? null : spawns.splice(i, 1)[0].description;
+  }
+
+  #finish(s, key, now) {
+    const a = s.agents.get(key);
+    if (!a || key === 'main' || a.done) return false;
+    clearAll(a);
+    a.done = now;
+    return true;
+  }
+
   #syncBackground(s, tasks, now) {
     if (!Array.isArray(tasks)) return;
     const running = new Map(tasks.filter((t) => t.type === 'subagent' && t.status === 'running').map((t) => [t.id, t]));
-    for (const key of [...s.agents.keys()]) if (key !== 'main' && !running.has(key)) s.agents.delete(key);
+    for (const key of [...s.agents.keys()]) if (!running.has(key)) this.#finish(s, key, now);
     for (const [id, t] of running) {
       let a = s.agents.get(id);
       if (!a) {
-        a = newAgent(id, t.agent_type);
+        a = newAgent(id, t.agent_type, null, now);
         setBase(a, 'working', now);
         s.agents.set(id, a);
       }
@@ -267,7 +305,7 @@ export class Board {
       const main = s.agents.get('main');
       const injected = parseInjected(e.prompt);
       if (injected) {
-        if (injected.agentId) s.agents.delete(injected.agentId);
+        if (injected.agentId) this.#finish(s, injected.agentId, now);
         setBase(main, 'working', now);
         this.#activity(s, injected.line, main, now);
         return;
@@ -283,7 +321,12 @@ export class Board {
     },
     PreToolUse: (s, e, now) => {
       s.visible = true;
-      const a = this.#agent(s, e);
+      const a = this.#agent(s, e, now);
+      if ((e.tool_name === 'Agent' || e.tool_name === 'Task') && e.tool_input) {
+        const spawns = (s.spawns ??= []);
+        spawns.push({ type: e.tool_input.subagent_type || 'general-purpose', description: clip(e.tool_input.description, 80) });
+        if (spawns.length > SPAWNS_KEEP) spawns.shift();
+      }
       const id = e.tool_use_id ?? `~pre-${now}`;
       a.open.set(id, e.tool_name);
       setBase(a, 'working', now);
@@ -297,14 +340,16 @@ export class Board {
       this.#activity(s, describeTool(e.tool_name, e.tool_input), a, now);
     },
     PermissionRequest: (s, e, now) => {
-      const a = this.#agent(s, e);
+      const a = this.#agent(s, e, now);
       const candidates = [...a.open].filter(([id, tool]) => tool === e.tool_name && !a.pending.has(id));
       if (e.tool_name === 'AskUserQuestion' && candidates.length === 0) return;
       const id = candidates.at(-1)?.[0] ?? `~perm-${now}`;
       a.pending.set(id, { tool: e.tool_name, detail: `Needs permission: ${describeTool(e.tool_name, e.tool_input)}`, since: now });
     },
     PostToolUse: (s, e, now) => {
-      const a = this.#agent(s, e);
+      const a = this.#agent(s, e, now);
+      const spawned = e.tool_response?.agentId && s.agents.get(e.tool_response.agentId);
+      if (spawned) spawned.description ??= clip(e.tool_response.description, 80);
       a.open.delete(e.tool_use_id);
       a.pending.delete(e.tool_use_id);
       for (const id of a.pending.keys()) if (id.startsWith('~')) a.pending.delete(id);
@@ -338,12 +383,12 @@ export class Board {
     },
     SubagentStart: (s, e, now) => {
       if (!e.agent_id || s.agents.has(e.agent_id) || this.#agentElsewhere(s.id, e.agent_id)) return;
-      const a = newAgent(e.agent_id, e.agent_type || null);
+      const a = newAgent(e.agent_id, e.agent_type || null, this.#spawnDescription(s, e.agent_type), now);
       setBase(a, 'working', now);
       s.agents.set(e.agent_id, a);
     },
-    SubagentStop: (s, e) => {
-      if (e.agent_id && e.agent_id !== 'main') s.agents.delete(e.agent_id);
+    SubagentStop: (s, e, now) => {
+      if (e.agent_id) this.#finish(s, e.agent_id, now);
     },
     TaskCreated: (s, e) => {
       s.tasks.total++;
@@ -358,6 +403,7 @@ export class Board {
     SessionEnd: (s, e, now) => {
       s.ended = now;
       for (const a of s.agents.values()) clearAll(a);
+      for (const key of s.agents.keys()) this.#finish(s, key, now);
       setBase(s.agents.get('main'), 'ended', now);
     },
   };
@@ -407,6 +453,7 @@ export class Board {
     for (const s of this.sessions.values()) {
       if (s.ended || !s.transcriptPath) continue;
       for (const a of s.agents.values()) {
+        if (a.done) continue;
         const quiet = a.base === 'working' && now - s.lastEvent > QUIET_WATCH_MS;
         if (a.pending.size === 0 && !quiet) continue;
         const path = a.key === 'main' ? s.transcriptPath : s.transcriptPath.replace(/\.jsonl$/, '') + `/subagents/agent-${a.key}.jsonl`;
@@ -426,6 +473,12 @@ export class Board {
   sweep(now = Date.now()) {
     let changed = false;
     for (const [id, s] of this.sessions) {
+      for (const [key, a] of s.agents) {
+        if (a.done && now - a.done > SUB_DONE_KEEP_MS) {
+          s.agents.delete(key);
+          changed = true;
+        }
+      }
       const state = this.#sessionView(s, now).state;
       const expired =
         (s.ended && now - s.ended > ENDED_KEEP_MS) ||
@@ -454,6 +507,7 @@ export class Board {
       if (s.ended) continue;
       s.ended = now;
       for (const a of s.agents.values()) clearAll(a);
+      for (const key of s.agents.keys()) this.#finish(s, key, now);
       setBase(s.agents.get('main'), 'ended', now);
     }
     for (const l of list) {
@@ -514,7 +568,7 @@ export class Board {
     if (s.ended) return { state: 'ended', detail: null, question: null, since: s.ended, agent: s.agents.get('main') };
     let top = { ...view(s.agents.get('main')), agent: s.agents.get('main') };
     for (const a of s.agents.values()) {
-      if (a.key === 'main') continue;
+      if (a.key === 'main' || a.done) continue;
       const v = view(a);
       const more = URGENCY[v.state] > URGENCY[top.state] || (URGENCY[v.state] === URGENCY[top.state] && NEEDS_YOU.has(v.state) && v.since < top.since);
       if (more) top = { ...v, agent: a };
@@ -530,6 +584,7 @@ export class Board {
       const top = this.#sessionView(s, now);
       const identity = this.#identity(s);
       const subagents = [...s.agents.values()].filter((a) => a.key !== 'main');
+      const running = subagents.filter((a) => !a.done);
       let detail = top.detail;
       if (detail && top.agent.key !== 'main') detail += ` (${top.agent.type ?? 'subagent'})`;
       const todo = s.todo ?? (s.tasks.total ? { current: s.tasks.current, done: s.tasks.done, total: s.tasks.total } : null);
@@ -548,8 +603,8 @@ export class Board {
         lastMessage: s.lastMessage,
         output: top.state === 'working' ? tail(s.recentText, OUTPUT_CHARS) : '',
         todo,
-        subagents: subagents.length,
-        subagentList: subagents.map((a) => ({ type: a.type, description: a.description, state: view(a).state })),
+        subagents: running.length,
+        subagentList: subagentList(subagents),
         since: new Date(top.since || s.lastEvent).toISOString(),
         lastEvent: new Date(s.lastEvent).toISOString(),
         started: new Date(s.started).toISOString(),

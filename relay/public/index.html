@@ -81,6 +81,24 @@
   .row.compact .summary { -webkit-line-clamp: 1; font-size: 24px; }
   .row.compact .activity div:nth-child(n + 2) { display: none; }
   .activity .sub::before { content: "▸ "; color: var(--accent, var(--dim)); }
+  .row.has-kids { align-items: start; }
+  .row.has-kids > .avatar, .row.has-kids > .main, .row.has-kids > .activity, .row.has-kids > .ago { align-self: center; }
+  .kids { grid-column: 2 / -1; display: flex; flex-direction: column; gap: 8px; padding-top: 10px; }
+  .kid { flex: 0 0 72px; height: 72px; background: #1e2228; border: 2px solid var(--line); border-radius: 12px; display: grid; grid-template-columns: 64px minmax(0, 1fr) 240px; column-gap: 16px; align-items: center; padding: 0 20px 0 14px; position: relative; overflow: hidden; --accent: var(--grey); }
+  .kid::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; background: var(--accent); }
+  .kid.working { --accent: var(--green); }
+  .kid.needs_permission, .kid.asking { --accent: var(--red); border-color: #ff4d3d99; }
+  .kid.done { opacity: .55; }
+  .kid .avatar { width: 56px; height: 56px; border-radius: 12px; margin-left: 4px; font-size: 28px; box-shadow: 0 0 0 3px var(--accent); }
+  .kid-main { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .kid-title { font-size: 24px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .kid-title b { margin-right: 12px; }
+  .kid-line { font-size: 21px; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .kid.needs_permission .kid-line, .kid.asking .kid-line { color: #ffd9d4; }
+  .kid-state { font-size: 22px; font-weight: 600; color: var(--accent); text-align: right; white-space: nowrap; }
+  .kids-more { font-size: 22px; color: var(--dim); padding-left: 16px; height: 28px; }
+  .slide .kids { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; column-gap: 20px; row-gap: 8px; margin-top: 28px; padding-top: 0; }
+  .slide .kids .kids-more { align-self: center; }
   .summary { font-size: 28px; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .summary.prompt, .summary.message { color: var(--dim); }
   .summary.prompt { font-style: italic; }
@@ -93,7 +111,7 @@
   .ago { font-size: 26px; color: var(--dim); font-variant-numeric: tabular-nums; text-align: right; }
   .more { flex: 0 0 64px; display: flex; align-items: center; justify-content: center; font-size: 30px; color: var(--dim); }
   .empty { flex: 1; display: flex; align-items: center; justify-content: center; font-size: 48px; color: var(--dim); }
-  .slide { flex: 1; display: grid; grid-template-columns: 200px minmax(0, 1fr); grid-template-rows: auto auto 1fr auto; column-gap: 24px; min-height: 0; cursor: pointer; }
+  .slide { flex: 1; display: grid; grid-template-columns: 200px minmax(0, 1fr); grid-template-rows: auto auto auto 1fr auto; column-gap: 24px; min-height: 0; cursor: pointer; }
   .slide .avatar { width: 192px; height: 192px; margin: 0; font-size: 96px; border-radius: 28px; --accent: var(--amber); grid-row: 1 / 3; }
   .slide h2 { font-size: 52px; margin: 0; align-self: end; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .slide .meta { font-size: 30px; color: var(--amber); margin-top: 8px; }
@@ -112,6 +130,7 @@
   .slide.needs .avatar { --accent: var(--red); }
   .slide.stale .meta, .slide.ended .meta { color: var(--dim); }
   .slide.stale .avatar, .slide.ended .avatar { --accent: var(--dim); }
+  .slide .kid .avatar, .slide.working .kid .avatar, .slide.needs .kid .avatar, .slide.stale .kid .avatar, .slide.ended .kid .avatar { width: 56px; height: 56px; margin: 0 0 0 4px; border-radius: 12px; font-size: 28px; grid-row: auto; --accent: inherit; }
   .slide .footer { grid-column: 1 / -1; text-align: center; font-size: 26px; color: var(--dim); padding-top: 16px; }
   .offline { position: absolute; right: 72px; bottom: 28px; font-size: 24px; color: var(--amber); display: none; }
   .offline.show { display: block; }
@@ -139,7 +158,7 @@
   <div id="detail"></div>
 </div>
 <script>
-  const STATE_TEXT = { working: 'Working', waiting: 'Done', needs_permission: 'Needs permission', asking: 'Asked a question', stale: 'No activity for 30 min', ended: 'Ended' };
+  const STATE_TEXT = { working: 'Working', waiting: 'Done', needs_permission: 'Needs permission', asking: 'Asked a question', done: 'Done', stale: 'No activity for 30 min', ended: 'Ended' };
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
   let status = { sessions: [] };
@@ -177,6 +196,37 @@
 
   const COMPACT = new Set(['waiting', 'stale', 'ended']);
   const ROW_HEIGHT = { full: 152, compact: 96, featured: 320, gap: 16, more: 56 };
+  const KIDS = { max: 5, caps: [5, 3, 1, 0], card: 72, gap: 8, pad: 20, more: 36 };
+  const kidsOf = (s) => s.subagentList ?? [];
+  let kidCap = KIDS.max;
+
+  function kidsHeight(s, cap = kidCap) {
+    const n = kidsOf(s).length;
+    if (!n || !cap) return 0;
+    const shown = Math.min(n, cap);
+    return shown * (KIDS.card + KIDS.gap) + KIDS.pad + (n > shown ? KIDS.more : 0);
+  }
+
+  function kidEntity(s, a) {
+    const needs = a.state === 'needs_permission' || a.state === 'asking';
+    return { id: `${s.id}~${a.id}`, character: a.character, state: a.state === 'done' ? 'ended' : needs ? 'kid' : a.state, needsYou: needs, since: a.started };
+  }
+
+  function kid(s, a) {
+    const e = kidEntity(s, a);
+    const avatar = a.character ? `<div class="avatar-slot" data-key="${esc(avatarKey(e))}"></div>` : `<div class="avatar" style="--hue:${hue(a.type ?? 'subagent')}">${esc((a.type ?? 's')[0].toUpperCase())}</div>`;
+    return `<div class="kid ${a.state}">${avatar}
+      <div class="kid-main"><div class="kid-title"><b>${esc(a.type ?? 'subagent')}</b>${esc(a.description ?? '')}</div>${a.line ? `<div class="kid-line">${esc(a.line)}</div>` : ''}</div>
+      <div class="kid-state">${esc(STATE_TEXT[a.state] ?? a.state)}</div>
+    </div>`;
+  }
+
+  function kids(s, cap = kidCap) {
+    const list = kidsOf(s);
+    if (!list.length || !cap) return '';
+    const extra = list.length - cap;
+    return `<div class="kids">${list.slice(0, cap).map((a) => kid(s, a)).join('')}${extra > 0 ? `<div class="kids-more">+${extra} more subagent${extra > 1 ? 's' : ''}</div>` : ''}</div>`;
+  }
 
   function featuredId(sessions) {
     if (sessions.length < 2 || sessions.some((s) => s.needsYou)) return null;
@@ -242,10 +292,15 @@
   }
 
   function mountAvatars(sessions) {
+    const entities = new Map();
+    for (const s of sessions) {
+      entities.set(s.id, s);
+      for (const a of kidsOf(s)) if (a.character) entities.set(`${s.id}~${a.id}`, kidEntity(s, a));
+    }
     const used = new Set();
     for (const slot of document.querySelectorAll('.avatar-slot')) {
       const key = slot.dataset.key;
-      const s = sessions.find((x) => x.id === key.split('|')[0]);
+      const s = entities.get(key.split('|')[0]);
       if (!avatars.has(key)) avatars.set(key, makeAvatar(s, key));
       slot.replaceWith(avatars.get(key));
       used.add(key);
@@ -266,12 +321,16 @@
       : request
         ? `<div class="request">${esc(request)}</div>${summary}`
         : summary;
-    const tags = [s.todo && `${s.todo.done}/${s.todo.total} tasks`, s.subagents && `${s.subagents} subagent${s.subagents > 1 ? 's' : ''}`].filter(Boolean).join(' · ');
+    const folded = kidCap ? 0 : kidsOf(s).length;
+    const tags = [s.todo && `${s.todo.done}/${s.todo.total} tasks`, folded && `${folded} subagent${folded > 1 ? 's' : ''}`].filter(Boolean).join(' · ');
     const room = featured ? 9 : 3;
     const lines = s.activity.slice(0, tags ? room - 1 : room).map((a) => (a.startsWith('↳ ') ? `<div class="sub">${esc(a.slice(2))}</div>` : `<div>${esc(a)}</div>`));
     if (tags) lines.push(`<div class="tags">${esc(tags)}</div>`);
     const now = !featured ? '' : s.output ? `<div class="output">${esc(s.output)}</div>` : s.todo?.current && s.todo.current !== s.summary ? `<div class="now">Now: ${esc(s.todo.current)}</div>` : '';
-    return `<div class="row ${s.state}${COMPACT.has(s.state) ? ' compact' : ''}${featured ? ' featured' : ''}" data-id="${s.id}">
+    const extra = kidsHeight(s);
+    const base = featured ? ROW_HEIGHT.featured : COMPACT.has(s.state) ? ROW_HEIGHT.compact : ROW_HEIGHT.full;
+    const grow = extra ? ` style="flex-basis:${base + extra}px;grid-template-rows:${base - (COMPACT.has(s.state) && !featured ? 24 : 36)}px auto"` : '';
+    return `<div class="row ${s.state}${COMPACT.has(s.state) ? ' compact' : ''}${featured ? ' featured' : ''}${extra ? ' has-kids' : ''}" data-id="${s.id}"${grow}>
       ${s.character ? `<div class="avatar-slot" data-key="${esc(avatarKey(s))}"></div>` : `<div class="avatar" style="--hue:${hue(s.project)}">${esc(s.project[0]?.toUpperCase() ?? '?')}</div>`}
       <div class="main">
         <div class="line1"><span class="project">${esc(s.project)}</span>${branch ? `<span class="branch">${esc(branch)}</span>` : ''}${stateText ? `<span class="state">${esc(stateText)}</span>` : ''}</div>
@@ -279,12 +338,13 @@
       </div>
       <div class="activity">${lines.join('')}</div>
       <div class="ago" data-since="${s.since}">${ago(s.since)}</div>
+      ${kids(s)}
     </div>`;
   }
 
   function detail(s) {
     if (!s) return '';
-    const subs = s.subagentList.map((a) => `<li>${esc(a.type ?? 'subagent')}: ${esc(a.description ?? '')} (${esc(STATE_TEXT[a.state] ?? a.state)})</li>`).join('');
+    const subs = s.subagentList.map((a) => `<li>${esc(a.type ?? 'subagent')}: ${esc(a.description ?? '')} (${esc(STATE_TEXT[a.state] ?? a.state)})${a.line ? ` · <span style="color:var(--dim)">${esc(a.line)}</span>` : ''}</li>`).join('');
     return `<div class="close">Esc to close</div>
       <h2>${esc(s.project)}${s.branch ? ` <span style="color:var(--dim);font-size:32px">${esc(s.branch)}</span>` : ''}</h2>
       <div style="color:var(--dim)">${[s.state === 'waiting' ? splitDetail(s).stateText : s.detail ?? STATE_TEXT[s.state], `started ${new Date(s.started).toLocaleTimeString()}`, s.host ?? ''].filter(Boolean).map(esc).join(' · ')}</div>
@@ -317,8 +377,7 @@
     }
     if (s.state === 'working') {
       const tasks = s.todo ? `<div>Tasks: ${s.todo.done} of ${s.todo.total} done${s.todo.current ? ` · now: ${esc(s.todo.current)}` : ''}</div>` : '';
-      const subs = s.subagentList.map((a) => `<li>${esc(a.type ?? 'subagent')}: ${esc(a.description ?? '')} (${esc(STATE_TEXT[a.state] ?? a.state)})</li>`).join('');
-      return { label: 'Recent activity', html: `${tasks}${subs ? `<ol>${subs}</ol>` : ''}${activityList(s, 10)}` };
+      return { label: 'Recent activity', html: `${tasks}${activityList(s, 10)}` };
     }
     if (s.lastMessage) return { label: 'Last message', html: markdown(s.lastMessage), text: s.lastMessage };
     return { label: 'Recent activity', html: activityList(s, 10) };
@@ -338,6 +397,7 @@
       ${s.character ? `<div class="avatar-slot" data-key="${esc(avatarKey(s))}"></div>` : `<div class="avatar" style="--hue:${hue(s.project)}">${esc(s.project[0]?.toUpperCase() ?? '?')}</div>`}
       <h2>${esc(s.project)}</h2>
       <div><div class="meta">${meta}</div><div class="gist">${esc(s.summary ?? '')}</div></div>
+      ${kids(s, KIDS.max)}
       <div class="message md${size}"><div class="label">${body.label}</div>${body.html}</div>
       <div class="footer">${hints.join(' · ')}</div>
     </div>`;
@@ -464,17 +524,24 @@
 
   function fitRows(sessions, height) {
     const featured = featuredId(sessions);
-    const cost = (s) => (s.id === featured ? ROW_HEIGHT.featured : COMPACT.has(s.state) ? ROW_HEIGHT.compact : ROW_HEIGHT.full);
-    let used = 0;
-    let count = 0;
-    for (const s of sessions) {
-      const next = used + (count ? ROW_HEIGHT.gap : 0) + cost(s);
-      const reserve = count + 1 < sessions.length ? ROW_HEIGHT.gap + ROW_HEIGHT.more : 0;
-      if (next + reserve > height) break;
-      used = next;
-      count++;
+    let best = { count: -1, cap: KIDS.max };
+    for (const cap of KIDS.caps) {
+      kidCap = cap;
+      const cost = (s) => (s.id === featured ? ROW_HEIGHT.featured : COMPACT.has(s.state) ? ROW_HEIGHT.compact : ROW_HEIGHT.full) + kidsHeight(s);
+      let used = 0;
+      let count = 0;
+      for (const s of sessions) {
+        const next = used + (count ? ROW_HEIGHT.gap : 0) + cost(s);
+        const reserve = count + 1 < sessions.length ? ROW_HEIGHT.gap + ROW_HEIGHT.more : 0;
+        if (next + reserve > height) break;
+        used = next;
+        count++;
+      }
+      if (count > best.count) best = { count, cap };
+      if (count === sessions.length) break;
     }
-    return sessions.slice(0, Math.max(count, 1));
+    kidCap = best.cap;
+    return sessions.slice(0, Math.max(best.count, 1));
   }
 
   function render() {

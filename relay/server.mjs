@@ -125,8 +125,23 @@ function status() {
   snap.sessions = sortSessions(hideIdle([...snap.sessions, ...peers.sessions()]));
   snap.quiet = isQuiet(quietHours);
   const active = snap.sessions.map((s) => s.id);
-  for (const s of snap.sessions) s.character = cast.describe(cast.assign(s.id, active));
+  for (const s of snap.sessions) {
+    s.character = cast.describe(cast.assign(s.id, active));
+  }
+  addAllSidekicks(snap.sessions);
   return snap;
+}
+
+function addAllSidekicks(sessions) {
+  const busy = sessions.map((s) => s.character?.id).filter(Boolean);
+  for (const s of sessions) addSidekicks(s, busy);
+}
+
+function addSidekicks(s, busy) {
+  if (!Array.isArray(s.subagentList)) return;
+  const ids = [...s.subagentList].sort((a, b) => String(a.started).localeCompare(String(b.started))).map((a) => a.id);
+  const picks = cast.sidekicks(s.character?.id, ids, busy);
+  for (const a of s.subagentList) a.character = cast.describe(picks.get(a.id));
 }
 
 const SAFE_NAME = /^[\w-]+$/;
@@ -215,7 +230,9 @@ function demoStatus() {
   demo.sessions.forEach((s, i) => {
     if (ids.length) s.character = cast.describe({ character: ids[i % ids.length], tint: Math.floor(i / ids.length) * 55 });
     for (const key of ['since', 'lastEvent', 'started']) s[key] = at(s[key]);
+    for (const a of s.subagentList ?? []) a.started = at(a.started ?? 0);
   });
+  addAllSidekicks(demo.sessions);
   return { ...demo, now: new Date().toISOString() };
 }
 
@@ -305,6 +322,7 @@ const server = createServer(async (req, res) => {
       demo.sessions.forEach((s, i) => {
         if (ids.length) s.character = cast.describe({ character: ids[i % ids.length], tint: Math.floor(i / ids.length) * 55 });
       });
+      addAllSidekicks(demo.sessions);
       res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
       return res.end(JSON.stringify(demo));
     }

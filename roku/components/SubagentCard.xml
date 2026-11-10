@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<component name="SubagentCard" extends="Group">
+  <interface>
+    <field id="relayUrl" type="string" />
+    <field id="cardWidth" type="integer" value="1568" />
+    <field id="agent" type="assocarray" onChange="onAgent" />
+  </interface>
+
+  <script type="text/brightscript" uri="Util.brs" />
+  <script type="text/brightscript" uri="SubagentCard.brs" />
+</component>

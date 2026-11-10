@@ -389,3 +389,65 @@ test('workPaths finds where a tool is working', () => {
   assert.deepEqual(workPaths('Bash', { command: 'cd /c/projects/docs && git -C "C:/projects/my app" status; cd src' }).map((p) => p.path), ['/c/projects/docs', 'C:/projects/my app']);
   assert.deepEqual(workPaths('Bash', {}), []);
 });
+
+test('subagents carry their description, type and current tool', () => {
+  const { card } = run([
+    { hook_event_name: 'UserPromptSubmit', prompt: 'explore and plan' },
+    { hook_event_name: 'PreToolUse', tool_name: 'Agent', tool_use_id: 'a1', tool_input: { description: 'Find hook payloads', subagent_type: 'Explore' } },
+    { hook_event_name: 'PreToolUse', tool_name: 'Agent', tool_use_id: 'a2', tool_input: { description: 'Draft the plan', subagent_type: 'Plan' } },
+    { hook_event_name: 'SubagentStart', agent_id: 'ag2', agent_type: 'Plan' },
+    { hook_event_name: 'SubagentStart', agent_id: 'ag1', agent_type: 'Explore' },
+    { hook_event_name: 'PreToolUse', agent_id: 'ag1', agent_type: 'Explore', tool_name: 'Grep', tool_use_id: 'g1', tool_input: { pattern: 'SubagentStart' } },
+    { hook_event_name: 'PreToolUse', agent_id: 'ag2', agent_type: 'Plan', tool_name: 'Bash', tool_use_id: 'b1', tool_input: { command: 'npm test' } },
+    { hook_event_name: 'PermissionRequest', agent_id: 'ag2', agent_type: 'Plan', tool_name: 'Bash', tool_input: { command: 'npm test' } },
+  ]);
+  const list = card().subagentList;
+  assert.deepEqual(
+    list.map(({ id, type, description, state, line }) => ({ id, type, description, state, line })),
+    [
+      { id: 'ag2', type: 'Plan', description: 'Draft the plan', state: 'needs_permission', line: 'Bash: npm test' },
+      { id: 'ag1', type: 'Explore', description: 'Find hook payloads', state: 'working', line: 'Grep "SubagentStart"' },
+    ],
+  );
+  assert.equal(card().subagents, 2);
+});
+
+test('a background agent picks up its description from the launch response', () => {
+  const { card } = run([
+    { hook_event_name: 'UserPromptSubmit', prompt: 'x' },
+    { hook_event_name: 'SubagentStart', agent_id: 'ag1', agent_type: 'general-purpose' },
+    { hook_event_name: 'PostToolUse', tool_name: 'Agent', tool_use_id: 'a1', tool_response: { isAsync: true, agentId: 'ag1', description: 'Nav bar' } },
+  ]);
+  assert.equal(card().subagentList[0].description, 'Nav bar');
+});
+
+test('a finished subagent lingers as done for 30 s without colouring the card', () => {
+  const { board, now } = run([
+    { hook_event_name: 'UserPromptSubmit', prompt: 'x' },
+    { hook_event_name: 'SubagentStart', agent_id: 'ag1', agent_type: 'Explore' },
+    { hook_event_name: 'PreToolUse', agent_id: 'ag1', tool_name: 'Bash', tool_use_id: 'b1', tool_input: { command: 'ls' } },
+    { hook_event_name: 'PermissionRequest', agent_id: 'ag1', tool_name: 'Bash', tool_input: { command: 'ls' } },
+    { hook_event_name: 'SubagentStop', agent_id: 'ag1', agent_type: 'Explore' },
+    { hook_event_name: 'Stop', background_tasks: [] },
+  ]);
+  const card = board.snapshot(now).sessions[0];
+  assert.equal(card.state, 'waiting');
+  assert.equal(card.subagents, 0);
+  assert.deepEqual(card.subagentList.map((a) => a.state), ['done']);
+  assert.equal(board.watchTargets(now).length, 0);
+  board.sweep(now + 20e3);
+  assert.equal(board.snapshot(now + 20e3).sessions[0].subagentList.length, 1);
+  board.sweep(now + 31e3);
+  assert.equal(board.snapshot(now + 31e3).sessions[0].subagentList.length, 0);
+});
+
+test('a background agent missing from Stop is marked done, and a hand-back finishes it', () => {
+  const { card } = run([
+    { hook_event_name: 'UserPromptSubmit', prompt: 'x' },
+    { hook_event_name: 'SubagentStart', agent_id: 'ag1', agent_type: 'general-purpose' },
+    { hook_event_name: 'SubagentStart', agent_id: 'ag2', agent_type: 'general-purpose' },
+    { hook_event_name: 'Stop', background_tasks: [{ id: 'ag2', type: 'subagent', status: 'running' }] },
+    { hook_event_name: 'UserPromptSubmit', prompt: '<agent-message from="ag2">\nDone.' },
+  ]);
+  assert.deepEqual(card().subagentList.map((a) => [a.id, a.state]), [['ag1', 'done'], ['ag2', 'done']]);
+});

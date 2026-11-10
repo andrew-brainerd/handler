@@ -58,6 +58,23 @@ export class Cast {
     return assignment;
   }
 
+  sidekicks(parentId, agentIds, busy = []) {
+    const free = this.characters.filter((c) => c.id !== parentId && !busy.includes(c.id));
+    const pool = free.length >= agentIds.length ? free : this.characters.filter((c) => c.id !== parentId);
+    const picks = new Map();
+    if (pool.length === 0) return picks;
+    const taken = new Set();
+    for (const agentId of agentIds) {
+      let h = 0;
+      for (const ch of String(agentId)) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+      let i = h % pool.length;
+      for (let n = 0; n < pool.length && taken.has(pool[i].id); n++) i = (i + 1) % pool.length;
+      taken.add(pool[i].id);
+      picks.set(agentId, { character: pool[i].id, tint: 0 });
+    }
+    return picks;
+  }
+
   describe(assignment) {
     const c = assignment && this.characters.find((x) => x.id === assignment.character);
     if (!c) return null;

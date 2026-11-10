@@ -32,6 +32,10 @@ sub init()
     m.agoLabel.horizAlign = "right"
     m.agoLabel.vertAlign = "center"
     m.agoLabel.translation = [1652, 0]
+
+    m.subs = m.top.createChild("Group")
+    m.subCards = []
+    m.subMore = MakeLabel(m.subs, 22, m.c.dim)
 end sub
 
 sub onAgo()
@@ -99,7 +103,8 @@ sub onSession()
     if s = invalid then return
     compact = m.top.compact
     featured = m.top.featured
-    height = RowHeight(s.state, featured)
+    base = BaseRowHeight(s.state, featured)
+    height = base + SubBlockHeight(s)
     variant = CardVariant(s)
     accent = AccentColor(variant)
 
@@ -112,7 +117,7 @@ sub onSession()
     avatarSize = 128
     if compact then avatarSize = 64
     if featured then avatarSize = 192
-    setAvatar(s, variant, avatarSize, height)
+    setAvatar(s, variant, avatarSize, base)
 
     parts = splitDetail(s)
     m.project.font = MakeFont(36, true)
@@ -175,15 +180,15 @@ sub onSession()
     m.body2.width = bodyWidth
     m.body1.visible = m.body1.text <> ""
     layoutLine1()
-    stack([m.line1, m.body1, m.body2], textLeft, height, 6)
+    stack([m.line1, m.body1, m.body2], textLeft, base, 6)
+    layoutSubs(s, base, textLeft)
 
     tags = []
     if type(s.todo) = "roAssociativeArray" then tags.Push(AsText(s.todo.done) + "/" + AsText(s.todo.total) + " tasks")
-    if s.subagents <> invalid and s.subagents > 0
-        noun = " subagent"
-        if s.subagents > 1 then noun = " subagents"
-        tags.Push(s.subagents.ToStr() + noun)
-    end if
+    folded = 0
+    if SubCap(s) = 0 then folded = SubCount(s)
+    if folded = 1 then tags.Push("1 subagent")
+    if folded > 1 then tags.Push(folded.ToStr() + " subagents")
     activity = []
     if type(s.activity) = "roArray" then activity = s.activity
     limit = 3
@@ -212,10 +217,39 @@ sub onSession()
         slot.color = m.c.text
         slot.visible = true
     end if
-    stack(m.lines, 1126, height, 4)
-    m.rule.height = height - 40
+    stack(m.lines, 1126, base, 4)
+    m.rule.height = base - 40
     m.rule.translation = [1104, 20]
-    m.agoLabel.height = height
+    m.agoLabel.height = base
+end sub
+
+sub layoutSubs(s as object, base as integer, left as integer)
+    list = []
+    if type(s.subagentList) = "roArray" then list = s.subagentList
+    shown = list.Count()
+    if shown > SubCap(s) then shown = SubCap(s)
+    while m.subCards.Count() < shown
+        card = m.subs.createChild("SubagentCard")
+        card.relayUrl = m.top.relayUrl
+        m.subCards.Push(card)
+    end while
+    m.subs.translation = [left, base - 4]
+    for i = 0 to m.subCards.Count() - 1
+        card = m.subCards[i]
+        card.visible = i < shown
+        if card.visible
+            card.cardWidth = m.width - left - 24
+            card.agent = list[i]
+            card.translation = [0, i * (SubCardHeight() + 8)]
+        end if
+    end for
+    extra = list.Count() - shown
+    if shown = 0 then extra = 0
+    m.subMore.visible = extra > 0
+    if extra > 0
+        m.subMore.text = MoreSubagents(extra)
+        m.subMore.translation = [16, shown * (SubCardHeight() + 8)]
+    end if
 end sub
 
 sub setBody(label as object, text as string, size as integer, color as string, lines as integer)
