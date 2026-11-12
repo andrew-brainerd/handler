@@ -53,6 +53,10 @@
       <label class="check"><input type="checkbox" name="summaries"> One-line summaries (runs Claude Haiku after each turn)</label>
       <label class="check"><input type="checkbox" name="notifications"> Desktop notifications when a session needs you</label>
       <label class="check"><input type="checkbox" name="askTv"> Ask to show Handler on the TVs when an agent starts working and they're off or showing something else</label>
+      <label class="field">Turn the TVs off after
+        <span class="inline"><input type="number" name="tvOffMinutes" min="0" max="1440" step="1"> minutes with every agent idle</span>
+        <span class="hint">Only TVs showing Handler are turned off, once per idle spell. 0 never turns them off.</span>
+      </label>
       <label class="check"><input type="checkbox" name="startOnLogin"> Start Handler when I sign in</label>
       <label class="field">Node.js
         <input name="nodePath" placeholder="Found automatically" spellcheck="false">

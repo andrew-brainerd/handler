@@ -44,6 +44,47 @@ pub enum Light {
     NeedsYou(usize),
 }
 
+pub struct IdleTimer {
+    since: Instant,
+    acted: bool,
+}
+
+impl IdleTimer {
+    pub fn new(now: Instant) -> Self {
+        Self { since: now, acted: false }
+    }
+
+    pub fn due(&mut self, busy: bool, minutes: u32, now: Instant) -> bool {
+        if busy {
+            *self = Self::new(now);
+            return false;
+        }
+        if minutes == 0 || self.acted || now.duration_since(self.since) < Duration::from_secs(u64::from(minutes) * 60) {
+            return false;
+        }
+        self.acted = true;
+        true
+    }
+}
+
+pub fn turn_off_idle(app: &AppHandle, ips: Vec<String>, minutes: u32) {
+    let app = app.clone();
+    std::thread::spawn(move || {
+        let relay = app.state::<Relay>();
+        for ip in ips {
+            let tv = tv::check(&ip);
+            if tv.screen != Screen::Handler {
+                relay.note(&format!("idle {minutes} min: left the {} alone ({:?})", tv.name, tv.screen));
+                continue;
+            }
+            match tv::power_off(&ip) {
+                Ok(()) => relay.note(&format!("idle {minutes} min: turned the {} off", tv.name)),
+                Err(err) => relay.note(&format!("idle {minutes} min: couldn't turn the {} off: {err}", tv.name)),
+            }
+        }
+    });
+}
+
 pub fn light(sessions: &[(bool, &str)], reachable: bool) -> Light {
     if !reachable {
         return Light::Off;
@@ -166,6 +207,7 @@ pub fn start(app: AppHandle) {
         let mut seen: Option<HashSet<String>> = None;
         let mut was_working: Option<bool> = None;
         let mut asked: Option<Instant> = None;
+        let mut idle = IdleTimer::new(Instant::now());
         loop {
             let relay = app.state::<Relay>();
             let settings = relay.settings();
@@ -199,6 +241,10 @@ pub fn start(app: AppHandle) {
                 let started = working > 0 && was_working == Some(false);
                 was_working = Some(working > 0);
                 let ips = tv::ips(&settings.roku_ips);
+                let busy = working > 0 || status.sessions.iter().any(|s| s.needs_you);
+                if idle.due(busy, settings.tv_off_minutes, Instant::now()) && !ips.is_empty() {
+                    turn_off_idle(&app, ips.clone(), settings.tv_off_minutes);
+                }
                 if started && settings.ask_tv && !status.quiet && !ips.is_empty() && asked.is_none_or(|t| t.elapsed() > ASK_EVERY) {
                     let tvs = elsewhere(&ips);
                     if !tvs.is_empty() {
@@ -222,6 +268,21 @@ mod tests {
         assert_eq!(light(&[], true), Light::Idle);
         assert_eq!(light(&[(false, "waiting"), (false, "working")], true), Light::Working);
         assert_eq!(light(&[(true, "asking"), (false, "working"), (true, "needs_permission")], true), Light::NeedsYou(2));
+    }
+
+    #[test]
+    fn idle_timer_fires_once_per_idle_spell() {
+        let t0 = Instant::now();
+        let min = |m: u64| t0 + Duration::from_secs(m * 60);
+        let mut idle = IdleTimer::new(t0);
+        assert!(!idle.due(false, 30, min(29)));
+        assert!(idle.due(false, 30, min(30)));
+        assert!(!idle.due(false, 30, min(90)));
+        assert!(!idle.due(true, 30, min(91)));
+        assert!(!idle.due(false, 30, min(120)));
+        assert!(idle.due(false, 30, min(121)));
+        let mut never = IdleTimer::new(t0);
+        assert!(!never.due(false, 0, min(600)));
     }
 
     #[test]

@@ -86,6 +86,10 @@ pub fn show(tv: &Tv) -> Result<(), String> {
     post(&agent, &tv.ip, &format!("launch/{CHANNEL}"))
 }
 
+pub fn power_off(ip: &str) -> Result<(), String> {
+    post(&agent(), ip, "keypress/PowerOff")
+}
+
 pub fn question(tvs: &[Tv]) -> (String, String) {
     let names: Vec<&str> = tvs.iter().map(|t| t.name.as_str()).collect();
     let title = format!("Show Handler on the {}?", names.join(" and "));

@@ -84,6 +84,7 @@ function read() {
     quietHours: data.get('quietHours').trim(),
     notifications: form.elements.notifications.checked,
     askTv: form.elements.askTv.checked,
+    tvOffMinutes: Math.max(0, Math.round(Number(data.get('tvOffMinutes')) || 0)),
     startOnLogin: form.elements.startOnLogin.checked,
     nodePath: data.get('nodePath').trim(),
   };

@@ -17,6 +17,7 @@ pub struct Settings {
     pub quiet_hours: String,
     pub notifications: bool,
     pub ask_tv: bool,
+    pub tv_off_minutes: u32,
     pub start_on_login: bool,
     pub node_path: String,
 }
@@ -40,6 +41,7 @@ impl Default for Settings {
             quiet_hours: String::new(),
             notifications: true,
             ask_tv: true,
+            tv_off_minutes: 30,
             start_on_login: true,
             node_path: String::new(),
         }
@@ -87,6 +89,9 @@ impl Settings {
     pub fn validate(&self) -> Result<(), String> {
         if self.port < 1024 {
             return Err("Pick a port from 1024 up".into());
+        }
+        if self.tv_off_minutes > 24 * 60 {
+            return Err("Pick at most 1440 minutes (a day) before turning the TVs off".into());
         }
         if !self.quiet_hours.trim().is_empty() && !valid_quiet(self.quiet_hours.trim()) {
             return Err("Quiet hours should look like 22:00-07:00".into());
@@ -158,6 +163,7 @@ mod tests {
         assert_eq!(s.port, 9000);
         assert!(s.summaries);
         assert_eq!(s.role, Role::Main);
+        assert_eq!(s.tv_off_minutes, 30);
     }
 
     #[test]
